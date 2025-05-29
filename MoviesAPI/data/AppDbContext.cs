@@ -24,7 +24,6 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<AuthModel>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
-
         base.OnModelCreating(modelBuilder);
     }
 }

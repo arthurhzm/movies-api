@@ -1,4 +1,6 @@
+
 using Microsoft.AspNetCore.Mvc;
+using MoviesAPI.DTO;
 using MoviesAPI.Services;
 
 
@@ -16,7 +18,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
-    public async Task<IActionResult> Create([FromBody] DTO.CreateUserDTO model)
+    public async Task<IActionResult> Create([FromBody] CreateUserDTO model)
     {
         try
         {
@@ -33,8 +35,35 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = e.Message });
             throw;
         }
-
-
     }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] AuthUserDTO model)
+    {
+        try
+        {
+            var (token, refreshToken) = await _authService.LoginAsync(model);
+            if (token == null || refreshToken == null)
+            {
+                return BadRequest("User login failed.");
+            }
+
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Expires = DateTime.UtcNow.AddDays(7),
+            };
+
+            Response.Cookies.Append("refreshToken", refreshToken, cookieOptions);
+
+            return Ok(new { data = new { token } });
+        }
+        catch (Exception e)
+        {
+            return BadRequest(new { message = e.Message });
+            throw;
+        }
+    }
+
 
 }
