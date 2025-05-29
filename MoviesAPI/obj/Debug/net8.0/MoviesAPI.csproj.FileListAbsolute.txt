@@ -42,3 +42,14 @@ C:\Users\arthu\Documents\GitHub\movies-api\MoviesAPI\obj\Debug\net8.0\refint\Mov
 C:\Users\arthu\Documents\GitHub\movies-api\MoviesAPI\obj\Debug\net8.0\MoviesAPI.pdb
 C:\Users\arthu\Documents\GitHub\movies-api\MoviesAPI\obj\Debug\net8.0\MoviesAPI.genruntimeconfig.cache
 C:\Users\arthu\Documents\GitHub\movies-api\MoviesAPI\obj\Debug\net8.0\ref\MoviesAPI.dll
+C:\Users\arthu\Documents\GitHub\movies-api\MoviesAPI\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+C:\Users\arthu\Documents\GitHub\movies-api\MoviesAPI\bin\Debug\net8.0\Microsoft.IdentityModel.Abstractions.dll
+C:\Users\arthu\Documents\GitHub\movies-api\MoviesAPI\bin\Debug\net8.0\Microsoft.IdentityModel.JsonWebTokens.dll
+C:\Users\arthu\Documents\GitHub\movies-api\MoviesAPI\bin\Debug\net8.0\Microsoft.IdentityModel.Logging.dll
+C:\Users\arthu\Documents\GitHub\movies-api\MoviesAPI\bin\Debug\net8.0\Microsoft.IdentityModel.Protocols.dll
+C:\Users\arthu\Documents\GitHub\movies-api\MoviesAPI\bin\Debug\net8.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+C:\Users\arthu\Documents\GitHub\movies-api\MoviesAPI\bin\Debug\net8.0\Microsoft.IdentityModel.Tokens.dll
+C:\Users\arthu\Documents\GitHub\movies-api\MoviesAPI\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll
+C:\Users\arthu\Documents\GitHub\movies-api\MoviesAPI\obj\Debug\net8.0\MoviesAPI.sourcelink.json
+C:\Users\arthu\Documents\GitHub\movies-api\MoviesAPI\bin\Debug\net8.0\DotNetEnv.dll
+C:\Users\arthu\Documents\GitHub\movies-api\MoviesAPI\bin\Debug\net8.0\Sprache.dll
