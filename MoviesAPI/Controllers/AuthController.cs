@@ -1,25 +1,39 @@
 using Microsoft.AspNetCore.Mvc;
+using MoviesAPI.Services;
 
 namespace MoviesAPI.Controllers;
 
 public class AuthController : ControllerBase
 {
     private readonly IConfiguration _configuration;
+    private readonly AuthService _authService;
 
-    public AuthController(IConfiguration configuration)
+    public AuthController(IConfiguration configuration, AuthService authService)
     {
         _configuration = configuration;
+        _authService = authService;
     }
 
     [HttpPost("register")]
-    public IActionResult Register([FromBody] DTO.CreateUserDTO model)
+    public async Task<IActionResult> Create([FromBody] DTO.CreateUserDTO model)
     {
-        if (model == null || string.IsNullOrEmpty(model.Email) || string.IsNullOrEmpty(model.Password))
+        try
         {
-            return BadRequest("Invalid registration data.");
+            var user = await _authService.RegisterAsync(model);
+            if (user == null)
+            {
+                return BadRequest("User registration failed.");
+            }
+
+            return Ok(new { Data = user, Message = "User registered successfully." });
+        }
+        catch (Exception e)
+        {
+            return BadRequest(new { message = e.Message });
+            throw;
         }
 
-        return Ok(new { message = "User registered successfully", user = model });
+
     }
 
 }
