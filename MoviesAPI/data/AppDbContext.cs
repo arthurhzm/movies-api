@@ -18,4 +18,13 @@ public class AppDbContext : DbContext
                 throw new InvalidOperationException("Database connection string is not configured."));
         }
     }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<AuthModel>()
+                .HasIndex(u => u.Email)
+                .IsUnique();
+
+        base.OnModelCreating(modelBuilder);
+    }
 }

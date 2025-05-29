@@ -30,7 +30,7 @@ public class AuthService
         var newUser = new AuthModel
         {
             Email = model.Email,
-            Password = model.Password
+            Password = BCrypt.Net.BCrypt.HashPassword(model.Password)
         };
 
         _context.Auth.Add(newUser);
