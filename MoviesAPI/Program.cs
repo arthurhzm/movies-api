@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using DotNetEnv;
+using MoviesAPI.Data;
+using Microsoft.EntityFrameworkCore;
 
 // Load .env file
 Env.Load();
@@ -23,6 +25,9 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = false
     };
 });
+
+var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(conn));
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
