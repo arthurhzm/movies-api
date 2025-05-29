@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MoviesAPI.Models;
 
 namespace MoviesAPI.Data;
 
@@ -6,7 +7,7 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    public DbSet<Models.AuthModel> Auth { get; set; } = null!;
+    public DbSet<AuthModel> Auth { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
