@@ -8,6 +8,8 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<AuthModel> Auth { get; set; } = null!;
+    public DbSet<ActorsModel> Actors { get; set; } = null!;
+    public DbSet<DirectorsModel> Directors { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

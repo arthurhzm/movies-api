@@ -5,6 +5,7 @@ using DotNetEnv;
 using MoviesAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using MoviesAPI.Services;
+using MoviesAPI.Extensions;
 
 // Load .env file
 Env.Load();
@@ -48,6 +49,8 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+await app.SeedDatabaseAsync();
 
 // Use CORS before authentication
 app.UseCors("AllowAll");
