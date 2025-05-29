@@ -13,6 +13,7 @@ public static class DatabaseExtensions
         await context.Database.EnsureCreatedAsync();
 
         await SeedDirectorsAsync(context);
+        await SeedActorsAsync(context);
 
         await context.SaveChangesAsync();
     }
@@ -24,5 +25,14 @@ public static class DatabaseExtensions
 
         var directors = DirectorSeeder.GetFamousDirectors();
         await context.Directors.AddRangeAsync(directors);
+    }
+
+    private static async Task SeedActorsAsync(AppDbContext context)
+    {
+        if (context.Actors.Any())
+            return;
+
+        var actors = ActorSeeder.GetFamousActors();
+        await context.Actors.AddRangeAsync(actors);
     }
 }
