@@ -32,8 +32,22 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-var conn = Environment.GetEnvironmentVariable("DATABASE_URL");
-builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(conn));
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+string connectionString;
+
+if (!string.IsNullOrEmpty(databaseUrl) && databaseUrl.StartsWith("postgresql://"))
+{
+    // Converter formato URI para connection string
+    var uri = new Uri(databaseUrl);
+    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.Trim('/')};Username={uri.UserInfo.Split(':')[0]};Password={uri.UserInfo.Split(':')[1]};SSL Mode=Require;Trust Server Certificate=true";
+}
+else
+{
+    connectionString = databaseUrl ?? throw new InvalidOperationException("DATABASE_URL não está configurada");
+}
+
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+
 
 builder.Services.AddScoped<AuthService>();
 

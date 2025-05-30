@@ -8,15 +8,24 @@ public static class DatabaseExtensions
 {
     public static async Task SeedDatabaseAsync(this WebApplication app)
     {
-        using var scope = app.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        await context.Database.MigrateAsync();
+            await context.Database.MigrateAsync();
 
-        await SeedDirectorsAsync(context);
-        await SeedActorsAsync(context);
+            await SeedDirectorsAsync(context);
+            await SeedActorsAsync(context);
 
-        await context.SaveChangesAsync();
+            await context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            var logger = app.Services.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "Erro ao executar migrações do banco de dados");
+            throw;
+        }
     }
 
     private static async Task SeedDirectorsAsync(AppDbContext context)
