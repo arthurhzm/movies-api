@@ -9,7 +9,10 @@ using MoviesAPI.Extensions;
 using Microsoft.OpenApi.Models;
 
 // Load .env file
-Env.Load();
+if (File.Exists(".env"))
+{
+    Env.Load();
+}
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
