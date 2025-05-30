@@ -29,7 +29,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+var conn = Environment.GetEnvironmentVariable("DATABASE_URL");
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(conn));
 
 builder.Services.AddScoped<AuthService>();
