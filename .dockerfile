@@ -5,16 +5,18 @@ EXPOSE 443
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY ["MoviesApi/MoviesApi.csproj", "MoviesApi/"]
-RUN dotnet restore "MoviesApi/MoviesApi.csproj"
+# Corrija o nome do projeto - deve ser MoviesAPI (não MoviesApi)
+COPY ["MoviesAPI/MoviesAPI.csproj", "MoviesAPI/"]
+RUN dotnet restore "MoviesAPI/MoviesAPI.csproj"
 COPY . .
-WORKDIR "/src/MoviesApi"
-RUN dotnet build "MoviesApi.csproj" -c Release -o /app/build
+WORKDIR "/src/MoviesAPI"
+RUN dotnet build "MoviesAPI.csproj" -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "MoviesApi.csproj" -c Release -o /app/publish
+RUN dotnet publish "MoviesAPI.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MoviesApi.dll"]
+# Corrija o nome do DLL também
+ENTRYPOINT ["dotnet", "MoviesAPI.dll"]
