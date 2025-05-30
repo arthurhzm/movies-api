@@ -76,10 +76,10 @@ public class AuthService
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(
-            [
+            Subject = new ClaimsIdentity(new[]
+            {
                     new Claim(ClaimTypes.Name, user.Id.ToString())
-            ]),
+            }),
             Expires = DateTime.UtcNow.AddHours(1),
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.ASCII.GetBytes(secretKey!)), SecurityAlgorithms.HmacSha256Signature)
         };
