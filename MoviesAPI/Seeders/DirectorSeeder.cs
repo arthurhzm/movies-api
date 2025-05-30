@@ -6,8 +6,8 @@ public class DirectorSeeder
 {
     public static List<DirectorsModel> GetFamousDirectors()
     {
-        return
-        [
+        return new List<DirectorsModel>
+        {
             new() {
                 Name = "Steven Spielberg",
                 PopularityScore = 9.8f,
@@ -68,6 +68,6 @@ public class DirectorSeeder
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             }
-        ];
+        };
     }
 }

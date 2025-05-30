@@ -8,8 +8,8 @@ public class ActorSeeder
 {
     public static List<ActorsModel> GetFamousActors()
     {
-        return
-        [
+        return new List<ActorsModel>
+        {
             new() {
                 Name = "Robert Downey Jr.",
                 Gender = "male",
@@ -80,6 +80,6 @@ public class ActorSeeder
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             }
-        ];
+        };
     }
 }
