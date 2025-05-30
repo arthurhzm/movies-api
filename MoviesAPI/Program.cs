@@ -100,7 +100,13 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// await app.SeedDatabaseAsync();
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    context.Database.Migrate();
+}
+
+await app.SeedDatabaseAsync();
 
 // Use CORS before authentication
 app.UseCors("AllowAll");
