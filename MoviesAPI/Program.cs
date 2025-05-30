@@ -100,7 +100,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-await app.SeedDatabaseAsync();
+// await app.SeedDatabaseAsync();
 
 // Use CORS before authentication
 app.UseCors("AllowAll");
