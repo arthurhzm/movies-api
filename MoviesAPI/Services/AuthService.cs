@@ -77,7 +77,12 @@ public class AuthService
             throw new ArgumentException("New password is required.");
         }
 
-        var user = await _context.Auth.FindAsync(model.Email) ?? throw new KeyNotFoundException("User not found.");
+        var user = await _context.Auth.FirstOrDefaultAsync(x => x.Email == model.Email);
+        if (user == null)
+        {
+            throw new Exception("User not found.");
+        }
+
         if (user.ApiKey is null)
         {
             throw new Exception("User don't have an api key yet.");

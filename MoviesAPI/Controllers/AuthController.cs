@@ -70,13 +70,13 @@ public class AuthController : ControllerBase
     {
         try
         {
+            Console.WriteLine($"Email: {model?.Email}, NewPassword: {model?.NewPassword}");
             var token = await _authService.UpdatePasswordAsync(model);
             return Ok(new { message = "Password updated successfully.", data = new { token } });
         }
         catch (Exception e)
         {
             return BadRequest(new { message = e.Message });
-            throw;
         }
     }
 }
