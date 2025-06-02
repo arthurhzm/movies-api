@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MoviesAPI.Data;
@@ -67,6 +68,24 @@ public class AuthService
         await _context.SaveChangesAsync();
 
         return (token, refreshToken);
+    }
+
+    public async Task<string> UpdatePasswordAsync(UpdatePasswordDTO model)
+    {
+        if (model == null || string.IsNullOrEmpty(model.NewPassword))
+        {
+            throw new ArgumentException("New password is required.");
+        }
+
+        var user = await _context.Auth.FindAsync(model.Email) ?? throw new KeyNotFoundException("User not found.");
+        if (user.ApiKey is null)
+        {
+            throw new Exception("User don't have an api key yet.");
+        }
+
+        user.Password = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+        await _context.SaveChangesAsync();
+        return user.ApiKey;
     }
 
     public string GenerateJwtToken(AuthModel user)

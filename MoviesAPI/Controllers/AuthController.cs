@@ -65,5 +65,18 @@ public class AuthController : ControllerBase
         }
     }
 
-
+    [HttpPost("update-password")]
+    public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordDTO model)
+    {
+        try
+        {
+            var token = await _authService.UpdatePasswordAsync(model);
+            return Ok(new { message = "Password updated successfully.", data = new { token } });
+        }
+        catch (Exception e)
+        {
+            return BadRequest(new { message = e.Message });
+            throw;
+        }
+    }
 }
