@@ -65,7 +65,7 @@ public class AuthController : ControllerBase
         }
     }
 
-    [HttpPost("update-password")]
+    [HttpPut("update-password")]
     public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordDTO model)
     {
         try
