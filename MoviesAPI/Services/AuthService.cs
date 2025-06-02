@@ -85,7 +85,7 @@ public class AuthService
 
         if (user.ApiKey is null)
         {
-            throw new Exception("User don't have an api key yet.");
+            user.ApiKey = GenerateRefreshToken();
         }
 
         user.Password = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
