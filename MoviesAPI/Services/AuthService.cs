@@ -86,6 +86,7 @@ public class AuthService
         if (user.ApiKey is null)
         {
             user.ApiKey = GenerateRefreshToken();
+            await _context.SaveChangesAsync();
         }
 
         user.Password = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
