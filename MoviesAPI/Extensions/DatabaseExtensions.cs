@@ -17,6 +17,7 @@ public static class DatabaseExtensions
 
             await SeedDirectorsAsync(context);
             await SeedActorsAsync(context);
+            await SeedGenresAsync(context);
 
             await context.SaveChangesAsync();
         }
