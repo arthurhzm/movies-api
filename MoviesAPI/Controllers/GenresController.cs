@@ -3,10 +3,10 @@ using MoviesAPI.Services;
 
 namespace MoviesAPI.Controllers;
 
-public class GendersController : ControllerBase
+public class GenresController : ControllerBase
 {
-    private readonly GendersService _gendersService;
-    public GendersController(GendersService gendersService)
+    private readonly GenresService _gendersService;
+    public GenresController(GenresService gendersService)
     {
         _gendersService = gendersService;
     }

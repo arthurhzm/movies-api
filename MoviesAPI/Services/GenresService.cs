@@ -4,17 +4,17 @@ using MoviesAPI.Models;
 
 namespace MoviesAPI.Services;
 
-public class GendersService
+public class GenresService
 {
     private readonly AppDbContext _context;
 
-    public GendersService(AppDbContext context)
+    public GenresService(AppDbContext context)
     {
         _context = context;
     }
 
-    public async Task<List<GendersModel>> GetAllGenders()
+    public async Task<List<GenresModel>> GetAllGenders()
     {
-        return await _context.Genders.ToListAsync();
+        return await _context.Genres.ToListAsync();
     }
 }

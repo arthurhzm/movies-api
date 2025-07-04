@@ -45,4 +45,13 @@ public static class DatabaseExtensions
         var actors = ActorSeeder.GetFamousActors();
         await context.Actors.AddRangeAsync(actors);
     }
+
+    private static async Task SeedGenresAsync(AppDbContext context)
+    {
+        if (context.Genres.Any())
+            return;
+
+        var genres = GenresSeeder.GetFamousGenres();
+        await context.Genres.AddRangeAsync(genres);
+    }
 }
