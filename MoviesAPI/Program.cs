@@ -49,6 +49,7 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connect
 
 
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<GendersService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
