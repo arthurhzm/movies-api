@@ -13,7 +13,7 @@ public class GenresService
         _context = context;
     }
 
-    public async Task<List<GenresModel>> GetAllGenders()
+    public async Task<List<GenresModel>> GetAllGenres()
     {
         return await _context.Genres.ToListAsync();
     }

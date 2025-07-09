@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MoviesAPI.Services;
 
@@ -11,10 +12,12 @@ public class GenresController : ControllerBase
         _gendersService = gendersService;
     }
 
-    [HttpGet]
-    public async Task<IActionResult> GetGenders()
+    [HttpGet("/genres")]
+    [Authorize]
+    public async Task<IActionResult> GetGenres()
     {
-        var genres = await _gendersService.GetAllGenders();
-        return Ok(genres);
+        var genres = await _gendersService.GetAllGenres();
+        return Ok(new { Data = genres, Message = "Genres retrieved successfully." });
+
     }
 }
