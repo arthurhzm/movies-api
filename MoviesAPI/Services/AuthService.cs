@@ -121,4 +121,17 @@ public class AuthService
         rng.GetBytes(randomNumber);
         return Convert.ToBase64String(randomNumber);
     }
+
+    public async Task<string> GetUserByRefreshToken(string refreshToken)
+    {
+        var user = await _context.Auth.FirstOrDefaultAsync(u => u.ApiKey == refreshToken);
+
+        if (user == null)
+        {
+            throw new Exception("Token inválido");
+        }
+
+        var newToken = GenerateJwtToken(user);
+        return newToken;
+    }
 }

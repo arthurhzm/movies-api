@@ -79,4 +79,18 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = e.Message });
         }
     }
+
+    [HttpPost("refresh-token")]
+    public async Task<IActionResult> RefreshToken()
+    {
+        var refreshToken = Request.Cookies["refreshToken"];
+
+        if (string.IsNullOrEmpty(refreshToken))
+        {
+            return Unauthorized(new { message = "Token inválido" });
+        }
+
+        var token = await _authService.GetUserByRefreshToken(refreshToken);
+        return Ok(new { data = new { token } });
+    }
 }
