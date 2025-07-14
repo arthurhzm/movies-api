@@ -5,8 +5,7 @@ using MoviesAPI.Data;
 using MoviesAPI.Services;
 
 namespace MoviesAPI.Controllers;
-
-class UserPreferencesController : ControllerBase
+public class UserPreferencesController : ControllerBase
 {
     private readonly UserPreferencesService _userPreferencesService;
     public UserPreferencesController(UserPreferencesService userPreferencesService)
@@ -14,7 +13,7 @@ class UserPreferencesController : ControllerBase
         _userPreferencesService = userPreferencesService;
     }
 
-    [HttpGet("/preferences/{userId}")]
+    [HttpGet("user/{userId}/preferences")]
     [Authorize]
     public async Task<IActionResult> GetUserPreferences(int userId)
     {

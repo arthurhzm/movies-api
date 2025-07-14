@@ -1,4 +1,5 @@
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MoviesAPI.DTO;
 using MoviesAPI.Services;
@@ -42,7 +43,7 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var (token, refreshToken) = await _authService.LoginAsync(model);
+            var (user, token, refreshToken) = await _authService.LoginAsync(model);
             if (token == null || refreshToken == null)
             {
                 return BadRequest("User login failed.");
@@ -56,13 +57,28 @@ public class AuthController : ControllerBase
 
             Response.Cookies.Append("refreshToken", refreshToken, cookieOptions);
 
-            return Ok(new { data = new { token } });
+            return Ok(new { data = new { token, user } });
         }
         catch (Exception e)
         {
             return BadRequest(new { message = e.Message });
             throw;
         }
+    }
+
+    [HttpPost("logout")]
+    [Authorize]
+    public IActionResult Logout()
+    {
+        var cookieOptions = new CookieOptions
+        {
+            HttpOnly = true,
+            Expires = DateTime.UtcNow.AddDays(-1),
+        };
+
+        Response.Cookies.Append("refreshToken", "", cookieOptions);
+
+        return Ok(new { message = "Logout successful." });
     }
 
     [HttpPut("update-password")]
@@ -90,7 +106,7 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Token inválido" });
         }
 
-        var token = await _authService.GetUserByRefreshToken(refreshToken);
-        return Ok(new { data = new { token } });
+        var (user, token) = await _authService.GetUserByRefreshToken(refreshToken);
+        return Ok(new { data = new { token, user } });
     }
 }

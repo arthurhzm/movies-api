@@ -48,7 +48,7 @@ public class AuthService
         return newUser;
     }
 
-    public async Task<(string token, string refreshToken)> LoginAsync(AuthUserDTO model)
+    public async Task<(AuthModel user, string token, string refreshToken)> LoginAsync(AuthUserDTO model)
     {
         if (model == null || string.IsNullOrEmpty(model.Email) || string.IsNullOrEmpty(model.Password))
         {
@@ -67,7 +67,7 @@ public class AuthService
         user.ApiKey = refreshToken;
         await _context.SaveChangesAsync();
 
-        return (token, refreshToken);
+        return (user, token, refreshToken);
     }
 
     public async Task<string> UpdatePasswordAsync(UpdatePasswordDTO model)
@@ -122,7 +122,7 @@ public class AuthService
         return Convert.ToBase64String(randomNumber);
     }
 
-    public async Task<string> GetUserByRefreshToken(string refreshToken)
+    public async Task<(AuthModel user, string newToken)> GetUserByRefreshToken(string refreshToken)
     {
         var user = await _context.Auth.FirstOrDefaultAsync(u => u.ApiKey == refreshToken);
 
@@ -132,6 +132,6 @@ public class AuthService
         }
 
         var newToken = GenerateJwtToken(user);
-        return newToken;
+        return (user, newToken);
     }
 }
