@@ -9,8 +9,9 @@ public class AppDbContext : DbContext
 
     public DbSet<AuthModel> Auth { get; set; } = null!;
     public DbSet<ActorsModel> Actors { get; set; } = null!;
-    public DbSet<DirectorsModel> Directors { get; set; } = null!;   
-    public DbSet<GenresModel> Genres { get; set; } = null!;   
+    public DbSet<DirectorsModel> Directors { get; set; } = null!;
+    public DbSet<GenresModel> Genres { get; set; } = null!;
+    public DbSet<UserPreferencesModel> UserPreferences { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

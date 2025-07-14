@@ -50,6 +50,7 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connect
 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<GenresService>();
+builder.Services.AddScoped<UserPreferencesService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
