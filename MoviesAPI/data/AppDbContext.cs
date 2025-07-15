@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<DirectorsModel> Directors { get; set; } = null!;
     public DbSet<GenresModel> Genres { get; set; } = null!;
     public DbSet<UserPreferencesModel> UserPreferences { get; set; } = null!;
+    public DbSet<UserMovieFeedbackModel> UserMovieFeedback { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

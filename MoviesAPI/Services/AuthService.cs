@@ -38,6 +38,7 @@ public class AuthService
 
         var newUser = new AuthModel
         {
+            Username = model.Username,
             Email = model.Email,
             Password = BCrypt.Net.BCrypt.HashPassword(model.Password)
         };
