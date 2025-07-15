@@ -20,8 +20,14 @@ public class UserPreferencesService
             .FirstOrDefaultAsync(up => up.UserId == userId);
     }
 
-    public async Task<UserPreferencesModel> CreateUserPreferences(int userId, CreateUserPreferencesDTO preferencesDto)
+    public async Task<UserPreferencesModel> PutUserPreferences(int userId, SetUserPreferencesDTO preferencesDto)
     {
+        var existingPreferences = await GetUserPreferencesByUserId(userId);
+        if (existingPreferences != null)
+        {
+            _context.UserPreferences.Remove(existingPreferences);
+        }
+
         var preferences = new UserPreferencesModel
         {
             UserId = userId,

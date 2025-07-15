@@ -1,6 +1,6 @@
 namespace MoviesAPI.DTO;
 
-public class CreateUserPreferencesDTO
+public class SetUserPreferencesDTO
 {
     public List<string> Genres { get; set; } = new List<string>();
     public List<string> Directors { get; set; } = new List<string>();

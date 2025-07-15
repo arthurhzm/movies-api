@@ -24,13 +24,13 @@ public class UserPreferencesController : ControllerBase
         {
             return NotFound();
         }
-        return Ok(preferences);
+        return Ok(new { Data = preferences , Message = "User preferences retrieved successfully." });
     }
 
 
-    [HttpPost("user/{userId}/preferences")]
+    [HttpPut("user/{userId}/preferences")]
     [Authorize]
-    public async Task<IActionResult> CreateUserPreferences(int userId, [FromBody] CreateUserPreferencesDTO preferences)
+    public async Task<IActionResult> UpdateUserPreferences(int userId, [FromBody] SetUserPreferencesDTO preferences)
     {
         if (preferences == null)
         {
@@ -42,7 +42,7 @@ public class UserPreferencesController : ControllerBase
             return BadRequest("At least one genre must be specified.");
         }
 
-        var createdPreferences = await _userPreferencesService.CreateUserPreferences(userId, preferences);
+        var createdPreferences = await _userPreferencesService.PutUserPreferences(userId, preferences);
         return Ok(new { Data = createdPreferences, Message = "User preferences created successfully." });
     }
 
