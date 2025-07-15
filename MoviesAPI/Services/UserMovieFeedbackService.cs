@@ -14,18 +14,40 @@ public class UserMovieFeedbackService
         _context = context;
     }
 
-    public async Task<UserMovieFeedbackModel?> GetUserFeedbacksByUserId(int userId)
+    public async Task<UserMovieFeedbackResponseDTO?> GetUserFeedbacksByUserId(int userId)
     {
-        return await _context.UserMovieFeedback
+        var feedback = await _context.UserMovieFeedback
             .FirstOrDefaultAsync(umf => umf.UserId == userId);
+        if (feedback == null)
+        {
+            return null;
+        }
+
+        return new UserMovieFeedbackResponseDTO
+        {
+            Id = feedback.Id,
+            Rating = feedback.Rating,
+            Review = feedback.Review
+        };
     }
 
-    public async Task<UserMovieFeedbackModel?> GetUserFeedbackByUserIdAndMovieTitle(int userId, string movieTitle)
+    public async Task<UserMovieFeedbackResponseDTO?> GetUserFeedbackByUserIdAndMovieTitle(int userId, string movieTitle)
     {
-        return await _context.UserMovieFeedback
+        var feedback = await _context.UserMovieFeedback
             .FirstOrDefaultAsync(umf => umf.UserId == userId && umf.MovieTitle == movieTitle);
+        if (feedback == null)
+        {
+            return null;
+        }
+
+        return new UserMovieFeedbackResponseDTO
+        {
+            Id = feedback.Id,
+            Rating = feedback.Rating,
+            Review = feedback.Review
+        };
     }
-    
+
     public async Task<UserMovieFeedbackModel> CreateUserMovieFeedback(int userId, CreateUserMovieFeedbackDTO feedbackDto)
     {
         var feedback = new UserMovieFeedbackModel
@@ -42,5 +64,28 @@ public class UserMovieFeedbackService
         await _context.SaveChangesAsync();
 
         return feedback;
+    }
+
+    public async Task<UserMovieFeedbackResponseDTO?> UpdateUserMovieFeedback(int feedbackId, UpdateUserMovieFeedbackDTO feedbackDto)
+    {
+        var feedback = await _context.UserMovieFeedback.FindAsync(feedbackId);
+        if (feedback == null)
+        {
+            return null;
+        }
+
+        feedback.Rating = feedbackDto.Rating;
+        feedback.Review = feedbackDto.Review;
+        feedback.UpdatedAt = DateTime.UtcNow;
+
+        _context.UserMovieFeedback.Update(feedback);
+        await _context.SaveChangesAsync();
+
+        return new UserMovieFeedbackResponseDTO
+        {
+            Id = feedback.Id,
+            Rating = feedback.Rating,
+            Review = feedback.Review
+        };
     }
 }

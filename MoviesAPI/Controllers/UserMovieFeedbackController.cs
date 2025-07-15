@@ -43,4 +43,22 @@ public class UserMovieFeedbackController : ControllerBase
         var createdFeedback = await _userMovieFeedbackService.CreateUserMovieFeedback(userId, feedback);
         return Ok(new { Data = createdFeedback, Message = "User movie feedback created successfully." });
     }
+
+    [HttpPatch("/feedback/{feedbackId}")]
+    [Authorize]
+    public async Task<IActionResult> UpdateUserMovieFeedback(int feedbackId, [FromBody] UpdateUserMovieFeedbackDTO feedback)
+    {
+        if (feedback == null)
+        {
+            return BadRequest("Invalid feedback data.");
+        }
+
+        var updatedFeedback = await _userMovieFeedbackService.UpdateUserMovieFeedback(feedbackId, feedback);
+        if (updatedFeedback == null)
+        {
+            return NotFound("Feedback not found.");
+        }
+
+        return Ok(new { Data = updatedFeedback, Message = "User movie feedback updated successfully." });
+    }
 }
