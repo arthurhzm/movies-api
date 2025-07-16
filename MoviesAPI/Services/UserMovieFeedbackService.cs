@@ -14,21 +14,18 @@ public class UserMovieFeedbackService
         _context = context;
     }
 
-    public async Task<UserMovieFeedbackResponseDTO?> GetUserFeedbacksByUserId(int userId)
+    public async Task<List<UserMovieFeedbackResponseDTO>> GetUserFeedbacksByUserId(int userId)
     {
-        var feedback = await _context.UserMovieFeedback
-            .FirstOrDefaultAsync(umf => umf.UserId == userId);
-        if (feedback == null)
-        {
-            return null;
-        }
+        var feedbacks = await _context.UserMovieFeedback
+            .Where(umf => umf.UserId == userId)
+            .ToListAsync();
 
-        return new UserMovieFeedbackResponseDTO
+        return feedbacks.Select(feedback => new UserMovieFeedbackResponseDTO
         {
             Id = feedback.Id,
             Rating = feedback.Rating,
             Review = feedback.Review
-        };
+        }).ToList();
     }
 
     public async Task<UserMovieFeedbackResponseDTO?> GetUserFeedbackByUserIdAndMovieTitle(int userId, string movieTitle)

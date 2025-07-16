@@ -18,9 +18,19 @@ public class UserMovieFeedbackController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetUserMovieFeedback(int userId, [FromQuery] string? movieTitle = null)
     {
-        var feedback = movieTitle != null ?
-            await _userMovieFeedbackService.GetUserFeedbackByUserIdAndMovieTitle(userId, movieTitle) :
-            await _userMovieFeedbackService.GetUserFeedbacksByUserId(userId);
+        List<UserMovieFeedbackResponseDTO>? feedbackList;
+        
+        if (movieTitle != null)
+        {
+            var singleFeedback = await _userMovieFeedbackService.GetUserFeedbackByUserIdAndMovieTitle(userId, movieTitle);
+            feedbackList = singleFeedback != null ? new List<UserMovieFeedbackResponseDTO> { singleFeedback } : null;
+        }
+        else
+        {
+            feedbackList = await _userMovieFeedbackService.GetUserFeedbacksByUserId(userId);
+        }
+        
+        var feedback = feedbackList;
 
         if (feedback == null)
         {
