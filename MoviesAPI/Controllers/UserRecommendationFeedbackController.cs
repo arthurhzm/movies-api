@@ -16,6 +16,14 @@ public class UserRecommendationFeedbackController : ControllerBase
         _userRecommendationFeedbackService = userRecommendationFeedbackService;
     }
 
+    [HttpGet("user/{userId}/recommendations/feedback")]
+    [Authorize]
+    public async Task<IActionResult> GetUserRecommendationFeedback(int userId)
+    {
+        var feedback = await _userRecommendationFeedbackService.GetUserRecommendationsFeedback(userId);
+        return Ok(new { Data = feedback, Message = "User recommendations feedback retrieved successfully." });
+    }
+
     [HttpPut("/recommendations/feedback")]
     [Authorize]
     public async Task<IActionResult> PutUserRecommendationFeedback([FromBody] PutUserRecommendationFeedbackDTO feedback)

@@ -23,6 +23,7 @@ public class UserMovieFeedbackService
         return feedbacks.Select(feedback => new UserMovieFeedbackResponseDTO
         {
             Id = feedback.Id,
+            MovieTitle = feedback.MovieTitle,
             Rating = feedback.Rating,
             Review = feedback.Review
         }).ToList();
@@ -40,6 +41,7 @@ public class UserMovieFeedbackService
         return new UserMovieFeedbackResponseDTO
         {
             Id = feedback.Id,
+            MovieTitle = feedback.MovieTitle,
             Rating = feedback.Rating,
             Review = feedback.Review
         };
@@ -81,6 +83,7 @@ public class UserMovieFeedbackService
         return new UserMovieFeedbackResponseDTO
         {
             Id = feedback.Id,
+            MovieTitle = feedback.MovieTitle,
             Rating = feedback.Rating,
             Review = feedback.Review
         };

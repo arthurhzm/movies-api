@@ -14,6 +14,20 @@ public class UserRecommendationFeedbackService
         _context = context;
     }
 
+
+    public async Task<List<UserRecommendationsFeedbackResponseDTO>> GetUserRecommendationsFeedback(int userId)
+    {
+        var feedbacks = await _context.UserRecommendationFeedback
+            .Where(f => f.UserId == userId)
+            .Select(f => new UserRecommendationsFeedbackResponseDTO
+            {
+                MovieTitle = f.MovieTitle,
+                Feedback = f.Feedback
+            })
+            .ToListAsync();
+
+        return feedbacks;
+    }
     public async Task<UserRecommendationFeedbackModel> PutUserRecommendationFeedback(PutUserRecommendationFeedbackDTO feedback)
     {
         var existingFeedback = await _context.UserRecommendationFeedback
