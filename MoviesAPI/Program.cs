@@ -52,6 +52,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<GenresService>();
 builder.Services.AddScoped<UserPreferencesService>();
 builder.Services.AddScoped<UserMovieFeedbackService>();
+builder.Services.AddScoped<UserRecommendationFeedbackService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
