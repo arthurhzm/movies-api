@@ -122,4 +122,17 @@ public class AuthController : ControllerBase
 
         return Ok(new { data = user });
     }
+
+    [HttpGet("/users")]
+    [Authorize]
+    public async Task<IActionResult> GetUsersByUsername([FromQuery] string username)
+    {
+        var users = await _authService.GetUsersByUsername(username);
+        if (users == null || users.Length == 0)
+        {
+            return NotFound(new { message = "No users found." });
+        }
+
+        return Ok(new { data = users });
+    }
 }

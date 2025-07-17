@@ -151,4 +151,17 @@ public class AuthService
             user.LastLogin
         );
     }
+
+    public async Task<UserProfilePreviewResponseDTO[]?> GetUsersByUsername(string username)
+    {
+        var users = await _context.Auth.Where(u => EF.Functions.Like(
+            u.Username.ToUpper().Trim(),
+            $"%{username.ToUpper().Trim()}%")).ToListAsync();
+        if (users == null || users.Count == 0)
+        {
+            return null;
+        }
+        return [.. users.Select(u => new UserProfilePreviewResponseDTO(u.Id, u.Username, u.ProfilePicture))];
+    }
+
 }
