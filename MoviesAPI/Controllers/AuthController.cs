@@ -109,4 +109,17 @@ public class AuthController : ControllerBase
         var (user, token) = await _authService.GetUserByRefreshToken(refreshToken);
         return Ok(new { data = new { token, user } });
     }
+
+    [HttpGet("/users/{userId}")]
+    [Authorize]
+    public async Task<IActionResult> GetUserById(string userId)
+    {
+        var user = await _authService.GetUserByIdAsync(userId);
+        if (user == null)
+        {
+            return NotFound(new { message = "User not found." });
+        }
+
+        return Ok(new { data = user });
+    }
 }

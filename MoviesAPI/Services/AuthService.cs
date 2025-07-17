@@ -135,4 +135,20 @@ public class AuthService
         var newToken = GenerateJwtToken(user);
         return (user, newToken);
     }
+
+    public async Task<UserProfileResponseDTO?> GetUserByIdAsync(string userId)
+    {
+        var user = await _context.Auth.FindAsync(int.Parse(userId));
+        if (user == null)
+        {
+            return null;
+        }
+
+        return new UserProfileResponseDTO(
+            user.BirthDate,
+            user.Gender,
+            user.ProfilePicture,
+            user.LastLogin
+        );
+    }
 }
