@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using MoviesAPI.Models;
 
 namespace MoviesAPI.Data;
@@ -14,6 +15,8 @@ public class AppDbContext : DbContext
     public DbSet<UserPreferencesModel> UserPreferences { get; set; } = null!;
     public DbSet<UserMovieFeedbackModel> UserMovieFeedback { get; set; } = null!;
     public DbSet<UserRecommendationFeedbackModel> UserRecommendationFeedback { get; set; } = null!;
+
+    public DbSet<UserFollowersModel> UserFollowers { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
