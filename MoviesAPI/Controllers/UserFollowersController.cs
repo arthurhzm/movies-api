@@ -14,7 +14,7 @@ public class UserFollowersController : ControllerBase
         _userFollowersService = userFollowersService;
     }
 
-    [HttpGet("followers/{userId}")]
+    [HttpGet("user/{userId}/followers")]
     [Authorize]
     public async Task<IActionResult> GetFollowers(int userId)
     {
@@ -27,6 +27,26 @@ public class UserFollowersController : ControllerBase
             }
 
             return Ok(new { Data = followers });
+        }
+        catch (Exception e)
+        {
+            return BadRequest(new { message = e.Message });
+        }
+    }
+
+    [HttpGet("user/{userId}/following")]
+    [Authorize]
+    public async Task<IActionResult> GetFollowing(int userId)
+    {
+        try
+        {
+            var following = await _userFollowersService.GetFollowingAsync(userId);
+            if (following == null)
+            {
+                return NotFound("No users followed by this user.");
+            }
+
+            return Ok(new { Data = following });
         }
         catch (Exception e)
         {

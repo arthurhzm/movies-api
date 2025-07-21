@@ -14,10 +14,33 @@ public class UserFollowersService
         _context = context;
     }
 
-    public async Task<List<UserFollowersModel>> GetFollowersAsync(int userId)
+    public async Task<List<UserProfilePreviewResponseDTO>> GetFollowersAsync(int userId)
     {
         return await _context.UserFollowers
             .Where(f => f.UserId == userId)
+            .Join(_context.Auth,
+            f => f.FollowerId,
+            auth => auth.Id,
+            (f, auth) => new UserProfilePreviewResponseDTO(
+                auth.Id,
+                auth.Username,
+                auth.ProfilePicture
+            ))
+            .ToListAsync();
+    }
+
+    public async Task<List<UserProfilePreviewResponseDTO>> GetFollowingAsync(int userId)
+    {
+        return await _context.UserFollowers
+            .Where(f => f.FollowerId == userId)
+            .Join(_context.Auth,
+            f => f.UserId,
+            auth => auth.Id,
+            (f, auth) => new UserProfilePreviewResponseDTO(
+                auth.Id,
+                auth.Username,
+                auth.ProfilePicture
+            ))
             .ToListAsync();
     }
 
@@ -67,5 +90,5 @@ public class UserFollowersService
         await _context.SaveChangesAsync();
 
         return true;
-    }   
+    }
 }
