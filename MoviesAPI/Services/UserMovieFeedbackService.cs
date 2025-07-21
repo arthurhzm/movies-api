@@ -18,6 +18,7 @@ public class UserMovieFeedbackService
     {
         var feedbacks = await _context.UserMovieFeedback
             .Where(umf => umf.UserId == userId)
+            .OrderByDescending(f => f.UpdatedAt)
             .ToListAsync();
 
         return feedbacks.Select(feedback => new UserMovieFeedbackResponseDTO

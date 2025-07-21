@@ -19,6 +19,7 @@ public class UserRecommendationFeedbackService
     {
         var feedbacks = await _context.UserRecommendationFeedback
             .Where(f => f.UserId == userId)
+            .OrderByDescending(f => f.UpdatedAt)
             .Select(f => new UserRecommendationsFeedbackResponseDTO
             {
                 MovieTitle = f.MovieTitle,

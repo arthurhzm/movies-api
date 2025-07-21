@@ -22,9 +22,9 @@ public class UserPreferencesController : ControllerBase
         var preferences = await _userPreferencesService.GetUserPreferencesByUserId(userId);
         if (preferences == null)
         {
-            return NotFound();
+            return NoContent();
         }
-        return Ok(new { Data = preferences , Message = "User preferences retrieved successfully." });
+        return Ok(new { Data = preferences, Message = "User preferences retrieved successfully." });
     }
 
 
