@@ -110,6 +110,24 @@ public class AuthController : ControllerBase
         return Ok(new { data = new { token, user } });
     }
 
+    [HttpPatch("/users/{userId}")]
+    [Authorize]
+    public async Task<IActionResult> UpdateUser(string userId, [FromBody] UpdateUserDTO model)
+    {
+        if (model == null)
+        {
+            return BadRequest("Invalid user data.");
+        }
+
+        var updatedUser = await _authService.UpdateUserAsync(userId, model);
+        if (updatedUser == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        return Ok(new { Data = updatedUser, Message = "User updated successfully." });
+    }
+
     [HttpGet("/users/{userId}")]
     [Authorize]
     public async Task<IActionResult> GetUserById(string userId)

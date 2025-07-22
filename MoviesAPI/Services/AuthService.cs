@@ -95,6 +95,58 @@ public class AuthService
         return user.ApiKey;
     }
 
+    public async Task<AuthModel?> UpdateUserAsync(string userId, UpdateUserDTO model)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            throw new ArgumentException("User ID is required.");
+        }
+
+        var user = await _context.Auth.FindAsync(int.Parse(userId));
+        if (user == null)
+        {
+            throw new Exception("User not found.");
+        }
+
+        if (!string.IsNullOrEmpty(model.Username))
+        {
+            user.Username = model.Username;
+        }
+
+        if (!string.IsNullOrEmpty(model.Email))
+        {
+            var existingUser = await _context.Auth.FirstOrDefaultAsync(u => u.Email == model.Email && u.Id != user.Id);
+            if (existingUser != null)
+            {
+                throw new InvalidOperationException("Email already exists.");
+            }
+            user.Email = model.Email;
+        }
+
+        if (!string.IsNullOrEmpty(model.Password))
+        {
+            user.Password = BCrypt.Net.BCrypt.HashPassword(model.Password);
+        }
+
+        if (!string.IsNullOrEmpty(model.BirthDate))
+        {
+            user.BirthDate = DateTime.SpecifyKind(DateTime.Parse(model.BirthDate), DateTimeKind.Utc);
+        }
+
+        if (!string.IsNullOrEmpty(model.ProfilePicture))
+        {
+            user.ProfilePicture = model.ProfilePicture;
+        }
+
+        if (!string.IsNullOrEmpty(model.Gender))
+        {
+            user.Gender = model.Gender;
+        }
+
+        await _context.SaveChangesAsync();
+        return user;
+    }
+
     public string GenerateJwtToken(AuthModel user)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
@@ -163,5 +215,6 @@ public class AuthService
         }
         return [.. users.Select(u => new UserProfilePreviewResponseDTO(u.Id, u.Username, u.ProfilePicture))];
     }
+
 
 }
