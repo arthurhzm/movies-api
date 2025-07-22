@@ -9,4 +9,6 @@ public class UserMovieFeedbackModel
     public string? Review { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    public virtual AuthModel User { get; set; } = null!;
 }

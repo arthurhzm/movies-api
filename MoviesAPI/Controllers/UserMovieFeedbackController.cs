@@ -19,7 +19,7 @@ public class UserMovieFeedbackController : ControllerBase
     public async Task<IActionResult> GetUserMovieFeedback(int userId, [FromQuery] string? movieTitle = null)
     {
         List<UserMovieFeedbackResponseDTO>? feedbackList;
-        
+
         if (movieTitle != null)
         {
             var singleFeedback = await _userMovieFeedbackService.GetUserFeedbackByUserIdAndMovieTitle(userId, movieTitle);
@@ -29,7 +29,7 @@ public class UserMovieFeedbackController : ControllerBase
         {
             feedbackList = await _userMovieFeedbackService.GetUserFeedbacksByUserId(userId);
         }
-        
+
         var feedback = feedbackList;
 
         if (feedback == null)
@@ -39,6 +39,19 @@ public class UserMovieFeedbackController : ControllerBase
 
         return Ok(new { Data = feedback, Message = "User movie feedback retrieved successfully." });
 
+    }
+
+    [HttpGet("user/{userId}/friends-feedback")]
+    [Authorize]
+    public async Task<IActionResult> GetFriendsMovieFeedback(int userId)
+    {
+        var feedback = await _userMovieFeedbackService.GetFriendsMoviesFeedback(userId);
+        if (feedback == null)
+        {
+            return NoContent();
+        }
+
+        return Ok(new { Data = feedback, Message = "Friends movie feedback retrieved successfully." });
     }
 
     [HttpPost("user/{userId}/feedback")]

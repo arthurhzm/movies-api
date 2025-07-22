@@ -44,6 +44,15 @@ public class UserFollowersService
             .ToListAsync();
     }
 
+    public async Task<List<UserProfilePreviewResponseDTO>> GetFriendsAsync(int userId)
+    {
+        var followers = await GetFollowersAsync(userId);
+        var following = await GetFollowingAsync(userId);
+
+        var friends = followers.Intersect(following, new UserProfilePreviewResponseDTOComparer()).ToList();
+        return friends;
+    }
+
     public async Task<bool> FollowUserAsync(FollowUserDTO model)
     {
         if (model == null || model.UserId <= 0 || model.FollowerId <= 0)

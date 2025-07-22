@@ -8,10 +8,12 @@ namespace MoviesAPI.Services;
 public class UserMovieFeedbackService
 {
     private readonly AppDbContext _context;
+    private readonly UserFollowersService _userFollowersService;
 
-    public UserMovieFeedbackService(AppDbContext context)
+    public UserMovieFeedbackService(AppDbContext context, UserFollowersService userFollowersService)
     {
         _context = context;
+        _userFollowersService = userFollowersService;
     }
 
     public async Task<List<UserMovieFeedbackResponseDTO>> GetUserFeedbacksByUserId(int userId)
@@ -46,6 +48,33 @@ public class UserMovieFeedbackService
             Rating = feedback.Rating,
             Review = feedback.Review
         };
+    }
+
+    public async Task<FriendMovieFeedbackDTO[]?> GetFriendsMoviesFeedback(int userId)
+    {
+        var friends = await _userFollowersService.GetFriendsAsync(userId);
+        var friendIds = friends.Select(f => f.UserId).ToList();
+
+        var feedbacks = await _context.UserMovieFeedback
+            .Include(umf => umf.User)
+            .Where(umf => friendIds.Contains(umf.UserId))
+            .OrderByDescending(f => f.UpdatedAt)
+            .ToListAsync();
+
+        if (feedbacks.Count == 0)
+        {
+            return null;
+        }
+
+        return [.. feedbacks.Select(feedback => new FriendMovieFeedbackDTO
+        {
+            UserId = feedback.UserId,
+            ProfilePicture = feedback.User.ProfilePicture,
+            Username = feedback.User.Username,
+            MovieTitle = feedback.MovieTitle,
+            Rating = feedback.Rating,
+            Review = feedback.Review!
+        })];
     }
 
     public async Task<UserMovieFeedbackModel> CreateUserMovieFeedback(int userId, CreateUserMovieFeedbackDTO feedbackDto)
