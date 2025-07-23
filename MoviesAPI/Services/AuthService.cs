@@ -1,4 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -225,6 +227,57 @@ public class AuthService
         }
 
         return new UserProfilePreviewResponseDTO(user.Id, user.Email, user.Username, user.ProfilePicture);
+    }
+
+    public async Task<bool> ForgotPasswordAsync(string email)
+    {
+        var user = await _context.Auth.FirstOrDefaultAsync(u => u.Email == email);
+        if (user == null)
+        {
+            return false;
+        }
+
+        var random = new Random();
+        var code = random.Next(100000, 999999).ToString();
+
+        var fromAddress = new MailAddress(Environment.GetEnvironmentVariable("SMTP_EMAIL")!, "CineMatch");
+        var toAddress = new MailAddress(email);
+        var fromPassword = Environment.GetEnvironmentVariable("SMTP_PASSWORD")!;
+        const string Subject = "CineMatch - Recuperação de Senha";
+        string Body = $"Olá {user.Username},\n\n" +
+                      "Você solicitou a recuperação de senha. Use o código abaixo para redefinir sua senha:\n\n" +
+                      $"{code}\n\n" +
+                      "Se você não solicitou essa recuperação, ignore este e-mail.\n\n" +
+                      "Atenciosamente,\nCineMatch";
+        var smtp = new SmtpClient
+        {
+            Host = "smtp.gmail.com",
+            Port = 587,
+            EnableSsl = true,
+            DeliveryMethod = SmtpDeliveryMethod.Network,
+            UseDefaultCredentials = false,
+            Credentials = new NetworkCredential(fromAddress.Address, fromPassword)
+        };
+
+        using (var message = new MailMessage(fromAddress, toAddress)
+        {
+            Subject = Subject,
+            Body = Body
+        })
+        {
+            try
+            {
+                smtp.Send(message);
+                Console.WriteLine("Email enviado com sucesso!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Erro ao enviar email: " + ex.Message);
+                throw new Exception("Erro ao enviar e-mail de recuperação de senha: " + ex.Message);
+            }
+        }
+
+        return true;
     }
 
 

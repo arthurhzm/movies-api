@@ -165,4 +165,23 @@ public class AuthController : ControllerBase
 
         return Ok();
     }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDTO model)
+    {
+        if (model == null || string.IsNullOrEmpty(model.Email))
+        {
+            return BadRequest("Email is required.");
+        }
+
+        try
+        {
+            await _authService.ForgotPasswordAsync(model.Email);
+            return Ok(new { message = "Password reset link sent to your email." });
+        }
+        catch (Exception e)
+        {
+            return BadRequest(new { message = e.Message });
+        }
+    }
 }
