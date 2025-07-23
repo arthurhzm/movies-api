@@ -12,6 +12,7 @@ public class AuthModel
     public string? Password { get; set; }
     public string? ApiKey { get; set; }
 
+    public string RecoveryToken { get; set; } = string.Empty;
     public DateTime? LastLogin { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
