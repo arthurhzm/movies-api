@@ -285,5 +285,23 @@ public class AuthService
         return true;
     }
 
+    public async Task<bool> VerifyForgotPasswordAsync(VerifyForgotPasswordDTO model)
+    {
+        if (model == null || string.IsNullOrEmpty(model.Email) || string.IsNullOrEmpty(model.Code))
+        {
+            throw new ArgumentException("Email and Code are required.");
+        }
+
+        var user = await _context.Auth.FirstOrDefaultAsync(u => u.Email == model.Email);
+        if (user == null || user.RecoveryToken != model.Code)
+        {
+            return false;
+        }
+
+        user.RecoveryToken = string.Empty;
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
 
 }

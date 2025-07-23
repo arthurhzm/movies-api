@@ -184,4 +184,28 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = e.Message });
         }
     }
+
+    [HttpPost("forgot-password/verify")]
+    public async Task<IActionResult> VerifyForgotPassword([FromBody] VerifyForgotPasswordDTO model)
+    {
+        if (model == null || string.IsNullOrEmpty(model.Email) || string.IsNullOrEmpty(model.Code))
+        {
+            return BadRequest("Email and verification code are required.");
+        }
+
+        try
+        {
+            var isValid = await _authService.VerifyForgotPasswordAsync(model);
+            if (!isValid)
+            {
+                return BadRequest("Invalid email or verification code.");
+            }
+
+            return Ok(new { message = "Verification successful." });
+        }
+        catch (Exception e)
+        {
+            return BadRequest(new { message = e.Message });
+        }
+    }
 }
