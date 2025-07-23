@@ -237,8 +237,13 @@ public class AuthService
             return false;
         }
 
+
         var random = new Random();
         var code = random.Next(100000, 999999).ToString();
+
+        user.RecoveryToken = code;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
 
         var fromAddress = new MailAddress(Environment.GetEnvironmentVariable("SMTP_EMAIL")!, "CineMatch");
         var toAddress = new MailAddress(email);
