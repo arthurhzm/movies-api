@@ -153,4 +153,16 @@ public class AuthController : ControllerBase
 
         return Ok(new { data = users });
     }
+
+    [HttpGet("/users/email")]
+    public async Task<IActionResult> GetUserByEmail([FromQuery] string email)
+    {
+        var user = await _authService.GetUserByEmailAsync(email);
+        if (user == null)
+        {
+            return NotFound(new { message = "User not found." });
+        }
+
+        return Ok();
+    }
 }

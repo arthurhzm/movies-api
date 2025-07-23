@@ -213,7 +213,18 @@ public class AuthService
         {
             return null;
         }
-        return [.. users.Select(u => new UserProfilePreviewResponseDTO(u.Id, u.Username, u.ProfilePicture))];
+        return [.. users.Select(u => new UserProfilePreviewResponseDTO(u.Id, u.Email, u.Username, u.ProfilePicture))];
+    }
+
+    public async Task<UserProfilePreviewResponseDTO?> GetUserByEmailAsync(string email)
+    {
+        var user = await _context.Auth.FirstOrDefaultAsync(u => u.Email == email);
+        if (user == null)
+        {
+            return null;
+        }
+
+        return new UserProfilePreviewResponseDTO(user.Id, user.Email, user.Username, user.ProfilePicture);
     }
 
 

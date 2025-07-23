@@ -23,6 +23,7 @@ public class UserFollowersService
             auth => auth.Id,
             (f, auth) => new UserProfilePreviewResponseDTO(
                 auth.Id,
+                auth.Email,
                 auth.Username,
                 auth.ProfilePicture
             ))
@@ -38,6 +39,7 @@ public class UserFollowersService
             auth => auth.Id,
             (f, auth) => new UserProfilePreviewResponseDTO(
                 auth.Id,
+                auth.Email,
                 auth.Username,
                 auth.ProfilePicture
             ))
