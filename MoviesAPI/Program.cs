@@ -28,7 +28,41 @@ builder.Services.AddAuthentication(options =>
     {
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!)),
         ValidateIssuer = false,
-        ValidateAudience = false
+        ValidateAudience = false,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+
+    // Configuração para produção - aceitar tokens de diferentes fontes
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            // Aceitar token do header Authorization
+            var authorizationHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(authorizationHeader) && authorizationHeader.StartsWith("Bearer "))
+            {
+                context.Token = authorizationHeader.Substring("Bearer ".Length).Trim();
+                Console.WriteLine($"JWT Token received: {context.Token.Substring(0, Math.Min(20, context.Token.Length))}...");
+            }
+            return Task.CompletedTask;
+        },
+        OnChallenge = context =>
+        {
+            // Log para debug em produção
+            Console.WriteLine($"JWT Challenge: {context.Error}, {context.ErrorDescription}");
+            Console.WriteLine($"Request Path: {context.Request.Path}");
+            Console.WriteLine($"Request Method: {context.Request.Method}");
+            return Task.CompletedTask;
+        },
+        OnAuthenticationFailed = context =>
+        {
+            // Log para debug em produção
+            Console.WriteLine($"JWT Auth Failed: {context.Exception.Message}");
+            Console.WriteLine($"Request Path: {context.Request.Path}");
+            Console.WriteLine($"Request Method: {context.Request.Method}");
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -64,10 +98,29 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
+        var allowedOrigins = new List<string>
+        {
+            "https://cinematch-inky.vercel.app",
+            "https://c1a353eaf0d7.ngrok-free.app"
+        };
+
+        if (builder.Environment.IsDevelopment())
+        {
+            allowedOrigins.AddRange(new[]
+            {
+                "http://localhost:5173",
+                "https://localhost:5173",
+                "http://192.160.8.165:5173",
+                "https://192.160.8.165:5173"
+            });
+        }
+
+        policy.WithOrigins(allowedOrigins.ToArray())
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials(); // Necessário para cookies
+              .AllowCredentials()
+              .WithExposedHeaders("ngrok-skip-browser-warning")
+              .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
     });
 });
 
@@ -107,6 +160,54 @@ var app = builder.Build();
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 app.Urls.Add($"http://*:{port}");
 
+// Middleware específico para ngrok - deve ser o primeiro
+app.Use(async (context, next) =>
+{
+    // Adicionar header para bypass do ngrok warning sempre
+    context.Response.Headers["ngrok-skip-browser-warning"] = "any";
+    
+    // Se for produção, adicionar headers CORS específicos para ngrok
+    if (!app.Environment.IsDevelopment())
+    {
+        var origin = context.Request.Headers.Origin.ToString();
+        if (!string.IsNullOrEmpty(origin) && 
+            (origin.Contains("cinematch-inky.vercel.app") || origin.Contains("ngrok-free.app")))
+        {
+            context.Response.Headers["Access-Control-Allow-Origin"] = origin;
+            context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
+            context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS";
+            context.Response.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept, Origin, X-Requested-With, ngrok-skip-browser-warning";
+            context.Response.Headers["Access-Control-Expose-Headers"] = "ngrok-skip-browser-warning";
+        }
+
+        // Handle preflight requests
+        if (context.Request.Method == "OPTIONS")
+        {
+            context.Response.StatusCode = 200;
+            return;
+        }
+    }
+
+    await next();
+});
+
+// Middleware personalizado para debug e CORS em produção
+if (!app.Environment.IsDevelopment())
+{
+    app.Use(async (context, next) =>
+    {
+        // Log da requisição
+        Console.WriteLine($"Request: {context.Request.Method} {context.Request.Path}");
+        Console.WriteLine($"Origin: {context.Request.Headers.Origin}");
+        Console.WriteLine($"Authorization: {context.Request.Headers.Authorization}");
+
+        await next();
+
+        // Log da resposta
+        Console.WriteLine($"Response: {context.Response.StatusCode}");
+    });
+}
+
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -115,17 +216,19 @@ using (var scope = app.Services.CreateScope())
 
 await app.SeedDatabaseAsync();
 
-// Use CORS before authentication
-app.UseCors("AllowAll");
-app.UseAuthentication();
-app.UseAuthorization();
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Use CORS first, before authentication
+app.UseCors("AllowAll");
+
+// Security middleware
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseHttpsRedirection();
 app.MapControllers();

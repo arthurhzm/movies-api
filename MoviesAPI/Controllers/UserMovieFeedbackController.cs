@@ -84,4 +84,17 @@ public class UserMovieFeedbackController : ControllerBase
 
         return Ok(new { Data = updatedFeedback, Message = "User movie feedback updated successfully." });
     }
+
+    [HttpDelete("/feedback/{feedbackId}")]
+    [Authorize]
+    public async Task<IActionResult> DeleteUserMovieFeedback(int feedbackId)
+    {
+        var deleted = await _userMovieFeedbackService.DeleteUserMovieFeedback(feedbackId);
+        if (!deleted)
+        {
+            return NotFound("Feedback not found.");
+        }
+
+        return Ok(new { Message = "User movie feedback deleted successfully." });
+    }
 }

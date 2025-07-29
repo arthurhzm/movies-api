@@ -118,4 +118,18 @@ public class UserMovieFeedbackService
             Review = feedback.Review
         };
     }
+
+    public async Task<bool> DeleteUserMovieFeedback(int feedbackId)
+    {
+        var feedback = await _context.UserMovieFeedback.FindAsync(feedbackId);
+        if (feedback == null)
+        {
+            return false;
+        }
+
+        _context.UserMovieFeedback.Remove(feedback);
+        await _context.SaveChangesAsync();
+
+        return true;
+    }
 }
