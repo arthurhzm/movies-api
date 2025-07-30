@@ -34,7 +34,7 @@ public class UserMovieFeedbackController : ControllerBase
 
         if (feedback == null)
         {
-            return NotFound("No feedback found.");
+            return NoContent();
         }
 
         return Ok(new { Data = feedback, Message = "User movie feedback retrieved successfully." });
@@ -96,5 +96,18 @@ public class UserMovieFeedbackController : ControllerBase
         }
 
         return Ok(new { Message = "User movie feedback deleted successfully." });
+    }
+
+    [HttpGet("movies/{movieTitle}/feedback")]
+    [Authorize]
+    public async Task<IActionResult> GetMovieFeedback(string movieTitle)
+    {
+        var feedback = await _userMovieFeedbackService.GetMovieUsersFeedback(movieTitle);
+        if (feedback == null)
+        {
+            return NoContent();
+        }
+
+        return Ok(new { Data = feedback, Message = "Movie feedback retrieved successfully." });
     }
 }

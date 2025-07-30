@@ -101,7 +101,7 @@ builder.Services.AddCors(options =>
         var allowedOrigins = new List<string>
         {
             "https://cinematch-inky.vercel.app",
-            "https://c1a353eaf0d7.ngrok-free.app"
+            "https://cfcc352d8998.ngrok-free.app"
         };
 
         if (builder.Environment.IsDevelopment())

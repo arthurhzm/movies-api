@@ -132,4 +132,24 @@ public class UserMovieFeedbackService
 
         return true;
     }
+
+    public async Task<MovieUsersFeedbackResponseDTO[]> GetMovieUsersFeedback(string movieTitle)
+    {
+        var feedbacks = await _context.UserMovieFeedback
+            .Include(umf => umf.User)
+            .Where(umf => umf.MovieTitle == movieTitle)
+            .OrderByDescending(f => f.UpdatedAt)
+            .ToListAsync();
+
+        return feedbacks.Select(feedback => new MovieUsersFeedbackResponseDTO
+        {
+            Id = feedback.Id,
+            UserId = feedback.UserId,
+            Username = feedback.User.Username,
+            ProfilePicture = feedback.User.ProfilePicture,
+            Rating = feedback.Rating,
+            Review = feedback.Review,
+            UpdatedAt = feedback.UpdatedAt
+        }).ToArray();
+    }
 }
