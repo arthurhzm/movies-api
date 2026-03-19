@@ -17,6 +17,8 @@ public class AppDbContext : DbContext
     public DbSet<UserRecommendationFeedbackModel> UserRecommendationFeedback { get; set; } = null!;
 
     public DbSet<UserFollowersModel> UserFollowers { get; set; } = null!;
+    public DbSet<GeneratedRecommendationModel> GeneratedRecommendations { get; set; } = null!;
+    public DbSet<MatchModel> Matches { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

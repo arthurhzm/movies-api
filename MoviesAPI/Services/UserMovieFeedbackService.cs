@@ -119,6 +119,14 @@ public class UserMovieFeedbackService
         };
     }
 
+    public async Task<int?> GetUserIdByFeedbackIdAsync(int feedbackId)
+    {
+        return await _context.UserMovieFeedback
+            .Where(f => f.Id == feedbackId)
+            .Select(f => (int?)f.UserId)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task<bool> DeleteUserMovieFeedback(int feedbackId)
     {
         var feedback = await _context.UserMovieFeedback.FindAsync(feedbackId);

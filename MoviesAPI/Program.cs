@@ -88,6 +88,13 @@ builder.Services.AddScoped<UserPreferencesService>();
 builder.Services.AddScoped<UserMovieFeedbackService>();
 builder.Services.AddScoped<UserRecommendationFeedbackService>();
 builder.Services.AddScoped<UserFollowersService>();
+builder.Services.AddScoped<GeminiService>();
+builder.Services.AddScoped<RecommendationService>();
+builder.Services.AddScoped<MatchService>();
+builder.Services.AddScoped<LetterboxdService>();
+builder.Services.AddHostedService<LetterboxdPollingService>();
+builder.Services.AddHttpClient("GeminiClient");
+builder.Services.AddHttpClient("LetterboxdClient");
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

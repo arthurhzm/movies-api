@@ -8,10 +8,12 @@ namespace MoviesAPI.Controllers;
 public class UserMovieFeedbackController : ControllerBase
 {
     private readonly UserMovieFeedbackService _userMovieFeedbackService;
+    private readonly RecommendationService _recommendationService;
 
-    public UserMovieFeedbackController(UserMovieFeedbackService userMovieFeedbackService)
+    public UserMovieFeedbackController(UserMovieFeedbackService userMovieFeedbackService, RecommendationService recommendationService)
     {
         _userMovieFeedbackService = userMovieFeedbackService;
+        _recommendationService = recommendationService;
     }
 
     [HttpGet("user/{userId}/feedback")]
@@ -64,6 +66,7 @@ public class UserMovieFeedbackController : ControllerBase
         }
 
         var createdFeedback = await _userMovieFeedbackService.CreateUserMovieFeedback(userId, feedback);
+        await _recommendationService.InvalidateCacheAsync(userId);
         return Ok(new { Data = createdFeedback, Message = "User movie feedback created successfully." });
     }
 
@@ -81,6 +84,9 @@ public class UserMovieFeedbackController : ControllerBase
         {
             return NotFound("Feedback not found.");
         }
+
+        var userId = await _userMovieFeedbackService.GetUserIdByFeedbackIdAsync(feedbackId);
+        if (userId.HasValue) await _recommendationService.InvalidateCacheAsync(userId.Value);
 
         return Ok(new { Data = updatedFeedback, Message = "User movie feedback updated successfully." });
     }

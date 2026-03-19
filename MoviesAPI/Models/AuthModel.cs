@@ -16,4 +16,7 @@ public class AuthModel
     public DateTime? LastLogin { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    public string? LetterboxdUsername { get; set; }
+    public DateTime? LetterboxdLastSync { get; set; }
 }
