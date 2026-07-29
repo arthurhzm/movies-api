@@ -10,13 +10,13 @@ namespace MoviesAPI.Services;
 public class RecommendationService
 {
     private readonly AppDbContext _context;
-    private readonly GeminiService _geminiService;
+    private readonly HuggingFaceService _huggingFaceService;
     private const int CacheMinutes = 10;
 
-    public RecommendationService(AppDbContext context, GeminiService geminiService)
+    public RecommendationService(AppDbContext context, HuggingFaceService huggingFaceService)
     {
         _context = context;
-        _geminiService = geminiService;
+        _huggingFaceService = huggingFaceService;
     }
 
     // ─── Cache invalidation ──────────────────────────────────────────────────
@@ -53,8 +53,15 @@ public class RecommendationService
             await FetchUserContextAsync(userId);
 
         var prompt = BuildPrompt(preferences, watchedMovies, recFeedback, friendsMovies, 10, special);
-        var responseText = await _geminiService.GenerateContentAsync(prompt);
+        var responseText = await _huggingFaceService.GenerateStructuredJsonAsync(
+            prompt,
+            "movie_recommendations",
+            HuggingFaceJsonSchemas.Recommendations);
         var recommendations = ParseJson(responseText, special);
+        if (recommendations.Count == 0)
+        {
+            throw new HuggingFaceGenerationException("O modelo não retornou recomendações válidas.");
+        }
 
         // Persist to cache (replace old entries)
         var toDelete = await _context.GeneratedRecommendations
@@ -80,6 +87,28 @@ public class RecommendationService
         return recommendations;
     }
 
+    public async Task<RouletteRecommendationDTO> GetRouletteRecommendationAsync(
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        var (preferences, watchedMovies, recFeedback, friendsMovies) = await FetchUserContextAsync(userId);
+        var prompt = BuildPrompt(preferences, watchedMovies, recFeedback, friendsMovies, 1, special: false);
+        prompt += """
+
+            ## MODO ROLETA MÁGICA
+            Escolha um único filme com a melhor combinação entre o histórico, o momento e a diversidade.
+            A explicação deve ser pessoal, convincente e ter no máximo 300 caracteres.
+            Inclua uma sinopse curta, uma pontuação de compatibilidade de 0 a 100 e três razões objetivas para o match.
+            """;
+
+        var responseText = await _huggingFaceService.GenerateStructuredJsonAsync(
+            prompt,
+            "roulette_recommendation",
+            HuggingFaceJsonSchemas.Roulette,
+            cancellationToken);
+        return ParseRouletteJson(responseText);
+    }
+
     // ─── Data fetching ────────────────────────────────────────────────────────
 
     private async Task<(
@@ -89,37 +118,35 @@ public class RecommendationService
         List<(string MovieTitle, int FriendCount, double AvgRating)>
     )> FetchUserContextAsync(int userId)
     {
-        var prefsTask = _context.UserPreferences
+        // DbContext não permite operações concorrentes; as leituras precisam compartilhar a mesma sequência.
+        var preferences = await _context.UserPreferences
+            .AsNoTracking()
             .FirstOrDefaultAsync(p => p.UserId == userId);
-
-        var moviesTask = _context.UserMovieFeedback
+        var watchedMovies = await _context.UserMovieFeedback
+            .AsNoTracking()
             .Where(f => f.UserId == userId)
             .OrderByDescending(f => f.Rating)
             .ThenByDescending(f => f.UpdatedAt)
             .Take(150)
             .ToListAsync();
-
-        var recFeedbackTask = _context.UserRecommendationFeedback
+        var recFeedback = await _context.UserRecommendationFeedback
+            .AsNoTracking()
             .Where(f => f.UserId == userId)
             .ToListAsync();
-
-        // People the user follows
-        var followingIdsTask = _context.UserFollowers
+        var followingIds = await _context.UserFollowers
+            .AsNoTracking()
             .Where(f => f.FollowerId == userId)
             .Select(f => f.UserId)
             .ToListAsync();
 
-        await Task.WhenAll(prefsTask, moviesTask, recFeedbackTask, followingIdsTask);
-
-        var followingIds = await followingIdsTask;
-
         // Top-rated movies from friends (excluding already watched by this user)
-        var userWatchedTitles = (await moviesTask).Select(m => m.MovieTitle).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var userWatchedTitles = watchedMovies.Select(m => m.MovieTitle).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        List<(string, int, double)> friendsMovies = new();
+        List<(string MovieTitle, int FriendCount, double AvgRating)> friendsMovies = new();
         if (followingIds.Count > 0)
         {
-            friendsMovies = await _context.UserMovieFeedback
+            var friendSignals = await _context.UserMovieFeedback
+                .AsNoTracking()
                 .Where(f => followingIds.Contains(f.UserId) && f.Rating >= 4
                             && !userWatchedTitles.Contains(f.MovieTitle))
                 .GroupBy(f => f.MovieTitle)
@@ -132,11 +159,13 @@ public class RecommendationService
                 .OrderByDescending(g => g.FriendCount)
                 .ThenByDescending(g => g.AvgRating)
                 .Take(20)
-                .ToListAsync()
-                .ContinueWith(t => t.Result.Select(x => (x.MovieTitle, x.FriendCount, x.AvgRating)).ToList());
+                .ToListAsync();
+            friendsMovies = friendSignals
+                .Select(signal => (signal.MovieTitle, signal.FriendCount, signal.AvgRating))
+                .ToList();
         }
 
-        return (await prefsTask, await moviesTask, await recFeedbackTask, friendsMovies);
+        return (preferences, watchedMovies, recFeedback, friendsMovies);
     }
 
     // ─── Prompt builder ───────────────────────────────────────────────────────
@@ -415,9 +444,50 @@ public class RecommendationService
             }
             return list;
         }
-        catch
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
-            return new List<RecommendationDTO>();
+            throw new HuggingFaceGenerationException("O modelo retornou recomendações inválidas.", ex);
+        }
+    }
+
+    private static RouletteRecommendationDTO ParseRouletteJson(string json)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var recommendation = document.RootElement.EnumerateArray().FirstOrDefault();
+            if (recommendation.ValueKind != JsonValueKind.Object)
+            {
+                throw new JsonException("Nenhuma recomendação retornada.");
+            }
+
+            var result = new RouletteRecommendationDTO
+            {
+                MovieTitle = recommendation.GetProperty("title").GetString() ?? string.Empty,
+                Year = recommendation.GetProperty("year").GetInt32(),
+                Overview = recommendation.GetProperty("overview").GetString(),
+                WhyRecommend = recommendation.GetProperty("why_recommend").GetString(),
+                ConfidenceScore = recommendation.GetProperty("confidence_score").GetInt32(),
+                PerfectMatchReasons = recommendation.GetProperty("perfect_match_reasons")
+                    .EnumerateArray()
+                    .Select(reason => reason.GetString() ?? string.Empty)
+                    .Where(reason => !string.IsNullOrWhiteSpace(reason))
+                    .ToList(),
+                IsSpecial = false
+            };
+            result.StreamingServices = recommendation.GetProperty("streaming_services")
+                .EnumerateArray()
+                .Select(service => service.GetString() ?? string.Empty)
+                .Where(service => !string.IsNullOrWhiteSpace(service))
+                .ToList();
+
+            return result.MovieTitle.Length == 0
+                ? throw new JsonException("Título ausente.")
+                : result;
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+        {
+            throw new HuggingFaceGenerationException("O modelo retornou uma recomendação de roleta inválida.", ex);
         }
     }
 

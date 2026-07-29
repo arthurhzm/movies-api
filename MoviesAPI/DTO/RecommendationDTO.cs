@@ -8,3 +8,10 @@ public class RecommendationDTO
     public List<string> StreamingServices { get; set; } = new();
     public bool IsSpecial { get; set; } = false;
 }
+
+public sealed class RouletteRecommendationDTO : RecommendationDTO
+{
+    public string? Overview { get; set; }
+    public int? ConfidenceScore { get; set; }
+    public List<string> PerfectMatchReasons { get; set; } = new();
+}

@@ -60,7 +60,9 @@ services:
     environment:
       DATABASE_URL: "Host=postgres;Port=5432;Database=cinematch;Username=cinematch;Password=${POSTGRES_PASSWORD}"
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      HF_TOKEN: ${HF_TOKEN}
+      HuggingFace__RecommendationModel: Qwen/Qwen3-32B
+      HuggingFace__ConversationModel: openai/gpt-oss-120b
       LETTERBOXD_POLL_HOURS: 6
       ASPNETCORE_ENVIRONMENT: Production
     depends_on:
@@ -80,7 +82,7 @@ Crie em `movies-api/.env.example`:
 ```env
 POSTGRES_PASSWORD=
 JWT_SECRET_KEY=
-GEMINI_API_KEY=
+HF_TOKEN=
 ```
 
 ### 1.3 Atualizar CORS da API
@@ -108,7 +110,7 @@ VITE_TMDB_API_KEY=          # sua chave TMDB atual (copie do .env)
 VITE_TMDB_READ_ACCESS_TOKEN= # mesmo valor
 ```
 
-> **Não inclua `VITE_GEMINI_API_KEY`** — a geração de recomendações agora usa o backend.
+> **Não inclua token de IA no frontend** — todas as gerações usam o backend.
 
 ### 1.5 Build do frontend
 
@@ -168,10 +170,12 @@ Exemplo preenchido:
 ```env
 POSTGRES_PASSWORD=a3f8b2c1...
 JWT_SECRET_KEY=7e4d9f2a1b3c...
-GEMINI_API_KEY=AIzaSy...
+HF_TOKEN=hf_...
 ```
 
 > Use `hex` em vez de `base64` nas senhas. Senhas base64 contêm `+`, `/` e `=` que o Docker Compose não aceita como valor sem aspas no `.env`.
+
+O `HF_TOKEN` precisa ter permissão de Inference Providers. O backend usa `Qwen/Qwen3-32B` para respostas JSON estruturadas (recomendações, roleta e busca) e `openai/gpt-oss-120b` para o chat; os modelos podem ser alterados pelas variáveis `HuggingFace__RecommendationModel` e `HuggingFace__ConversationModel` do compose.
 
 ### 3.2 Build e subir os containers
 

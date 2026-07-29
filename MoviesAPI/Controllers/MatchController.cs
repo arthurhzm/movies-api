@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MoviesAPI.Services;
@@ -17,14 +18,19 @@ public class MatchController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GenerateMatch(int userId, int targetUserId)
     {
+        if (!IsCurrentUser(userId))
+        {
+            return Forbid();
+        }
+
         try
         {
             var result = await _matchService.GenerateMatchAsync(userId, targetUserId);
-            return Ok(new { data = result, message = "Match generated successfully." });
+            return Ok(new { data = result, message = "Match gerado com sucesso." });
         }
-        catch (Exception ex)
+        catch (HuggingFaceGenerationException)
         {
-            return StatusCode(500, new { message = $"Error generating match: {ex.Message}" });
+            return StatusCode(StatusCodes.Status502BadGateway, new { message = "O match está indisponível no momento." });
         }
     }
 
@@ -32,7 +38,18 @@ public class MatchController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetMatchHistory(int userId)
     {
+        if (!IsCurrentUser(userId))
+        {
+            return Forbid();
+        }
+
         var history = await _matchService.GetMatchHistoryAsync(userId);
-        return Ok(new { data = history, message = "Match history retrieved successfully." });
+        return Ok(new { data = history, message = "Histórico de matches recuperado com sucesso." });
+    }
+
+    private bool IsCurrentUser(int userId)
+    {
+        var claimValue = User.FindFirst(ClaimTypes.Name)?.Value;
+        return int.TryParse(claimValue, out var authenticatedUserId) && authenticatedUserId == userId;
     }
 }

@@ -9,34 +9,23 @@ namespace MoviesAPI.Services;
 public class MatchService
 {
     private readonly AppDbContext _context;
-    private readonly GeminiService _geminiService;
+    private readonly HuggingFaceService _huggingFaceService;
 
-    public MatchService(AppDbContext context, GeminiService geminiService)
+    public MatchService(AppDbContext context, HuggingFaceService huggingFaceService)
     {
         _context = context;
-        _geminiService = geminiService;
+        _huggingFaceService = huggingFaceService;
     }
 
     public async Task<MatchResultDTO> GenerateMatchAsync(int userId1, int userId2)
     {
-        // Load both users' data in parallel
-        var (prefs1Task, prefs2Task, movies1Task, movies2Task, user1Task, user2Task) = (
-            _context.UserPreferences.FirstOrDefaultAsync(p => p.UserId == userId1),
-            _context.UserPreferences.FirstOrDefaultAsync(p => p.UserId == userId2),
-            _context.UserMovieFeedback.Where(f => f.UserId == userId1).ToListAsync(),
-            _context.UserMovieFeedback.Where(f => f.UserId == userId2).ToListAsync(),
-            _context.Auth.FindAsync(userId1).AsTask(),
-            _context.Auth.FindAsync(userId2).AsTask()
-        );
-
-        await Task.WhenAll(prefs1Task, prefs2Task, movies1Task, movies2Task, user1Task, user2Task);
-
-        var prefs1 = await prefs1Task;
-        var prefs2 = await prefs2Task;
-        var movies1 = await movies1Task;
-        var movies2 = await movies2Task;
-        var user1 = await user1Task;
-        var user2 = await user2Task;
+        // DbContext não suporta consultas concorrentes na mesma instância.
+        var prefs1 = await _context.UserPreferences.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId1);
+        var prefs2 = await _context.UserPreferences.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId2);
+        var movies1 = await _context.UserMovieFeedback.AsNoTracking().Where(f => f.UserId == userId1).ToListAsync();
+        var movies2 = await _context.UserMovieFeedback.AsNoTracking().Where(f => f.UserId == userId2).ToListAsync();
+        var user1 = await _context.Auth.AsNoTracking().FirstOrDefaultAsync(user => user.Id == userId1);
+        var user2 = await _context.Auth.AsNoTracking().FirstOrDefaultAsync(user => user.Id == userId2);
 
         // Find intersections
         var commonGenres = prefs1 != null && prefs2 != null
@@ -59,7 +48,10 @@ public class MatchService
             commonGenres, commonDirectors,
             allWatched);
 
-        var responseText = await _geminiService.GenerateContentAsync(prompt);
+        var responseText = await _huggingFaceService.GenerateStructuredJsonAsync(
+            prompt,
+            "movie_match",
+            HuggingFaceJsonSchemas.Match);
         var result = ParseMatchJson(responseText, commonGenres, commonDirectors);
 
         // Save to history
@@ -128,16 +120,9 @@ public class MatchService
                 CommonDirectors = commonDirectors
             };
         }
-        catch
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
-            return new MatchResultDTO
-            {
-                MovieTitle = "Filme não encontrado",
-                WhyItWorks = "Erro ao processar resposta da IA.",
-                CompatibilityScore = 0,
-                CommonGenres = commonGenres,
-                CommonDirectors = commonDirectors
-            };
+            throw new HuggingFaceGenerationException("O modelo retornou uma combinação inválida.", ex);
         }
     }
 
