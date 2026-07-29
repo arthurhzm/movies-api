@@ -19,4 +19,5 @@ public class AuthModel
 
     public string? LetterboxdUsername { get; set; }
     public DateTime? LetterboxdLastSync { get; set; }
+    public DateTime? LetterboxdLastImport { get; set; }
 }

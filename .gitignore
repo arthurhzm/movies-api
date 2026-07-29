@@ -1,3 +1,5 @@
 MoviesAPI/.env
 MoviesAPI/bin/
 MoviesAPI/obj/
+MoviesAPI.Tests/bin/
+MoviesAPI.Tests/obj/

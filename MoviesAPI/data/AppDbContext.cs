@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
 using MoviesAPI.Models;
 
 namespace MoviesAPI.Data;
@@ -25,6 +24,16 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<AuthModel>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
+
+        modelBuilder.Entity<UserMovieFeedbackModel>(entity =>
+        {
+            entity.Property(feedback => feedback.LetterboxdUri)
+                .HasMaxLength(UserMovieFeedbackModel.MaxLetterboxdUriLength);
+
+            entity.HasIndex(feedback => new { feedback.UserId, feedback.LetterboxdUri })
+                .IsUnique()
+                .HasFilter("\"LetterboxdUri\" IS NOT NULL");
+        });
 
         modelBuilder.Entity<UserRecommendationFeedbackModel>()
         .ToTable(t => t.HasCheckConstraint("CK_UserRecommendationFeedback_Feedback",

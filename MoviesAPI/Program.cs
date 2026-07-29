@@ -91,6 +91,7 @@ builder.Services.AddScoped<UserFollowersService>();
 builder.Services.AddScoped<GeminiService>();
 builder.Services.AddScoped<RecommendationService>();
 builder.Services.AddScoped<MatchService>();
+builder.Services.AddScoped<LetterboxdCsvParser>();
 builder.Services.AddScoped<LetterboxdService>();
 builder.Services.AddHostedService<LetterboxdPollingService>();
 builder.Services.AddHttpClient("GeminiClient");
@@ -172,12 +173,12 @@ app.Use(async (context, next) =>
 {
     // Adicionar header para bypass do ngrok warning sempre
     context.Response.Headers["ngrok-skip-browser-warning"] = "any";
-    
+
     // Se for produção, adicionar headers CORS específicos para ngrok
     if (!app.Environment.IsDevelopment())
     {
         var origin = context.Request.Headers.Origin.ToString();
-        if (!string.IsNullOrEmpty(origin) && 
+        if (!string.IsNullOrEmpty(origin) &&
             (origin.Contains("cinematch-inky.vercel.app") || origin.Contains("ngrok-free.app")))
         {
             context.Response.Headers["Access-Control-Allow-Origin"] = origin;
