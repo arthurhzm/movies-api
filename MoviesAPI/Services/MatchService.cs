@@ -89,7 +89,7 @@ public class MatchService
                 prompt,
                 "movie_match",
                 HuggingFaceJsonSchemas.Match,
-                temperature: 0.8);
+                temperature: 0.6);
             result = ParseMatchJson(responseText, commonGenres, commonDirectors);
 
             // Resolve the picked movie to its stable TMDB id so the frontend can load
