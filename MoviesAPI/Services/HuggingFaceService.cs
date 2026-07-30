@@ -65,8 +65,10 @@ public sealed class HuggingFaceService
         Exception? lastError = null;
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
+            // 4000 leaves room for verbose results (e.g. 10 search hits with
+            // synopses); 2000 truncated them into invalid JSON.
             var content = await SendChatCompletionAsync(
-                _recommendationModel, prompt, responseFormat, maxTokens: 2_000, cancellationToken);
+                _recommendationModel, prompt, responseFormat, maxTokens: 4_000, cancellationToken);
             try
             {
                 using (JsonDocument.Parse(content)) { }
