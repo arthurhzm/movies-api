@@ -59,6 +59,15 @@ public class MatchService
             .Take(15)
             .ToListAsync();
 
+        // Rotate the emphasized genre across the shared genres each generation so
+        // consecutive matches don't collapse onto the same one (e.g. animação).
+        var matchCount = await _context.Matches.AsNoTracking()
+            .CountAsync(m => (m.UserId1 == userId1 && m.UserId2 == userId2)
+                || (m.UserId1 == userId2 && m.UserId2 == userId1));
+        var focusGenre = commonGenres.Count > 0
+            ? commonGenres[matchCount % commonGenres.Count]
+            : null;
+
         // Generate, then reject any movie either user already saw and retry while
         // telling the model to avoid it. Match is a single-item generation (fast),
         // so a few attempts stay well within the request budget. Higher temperature
@@ -74,7 +83,7 @@ public class MatchService
                 prefs1, prefs2,
                 movies1, movies2,
                 commonGenres, commonDirectors,
-                allWatched, avoid);
+                allWatched, avoid, focusGenre);
 
             var responseText = await _huggingFaceService.GenerateStructuredJsonAsync(
                 prompt,
@@ -180,11 +189,15 @@ public class MatchService
         UserPreferencesModel? prefs1, UserPreferencesModel? prefs2,
         List<UserMovieFeedbackModel> movies1, List<UserMovieFeedbackModel> movies2,
         List<string> commonGenres, List<string> commonDirectors,
-        List<string> allWatched, IReadOnlyList<string> avoid)
+        List<string> allWatched, IReadOnlyList<string> avoid, string? focusGenre)
     {
         var avoidLine = avoid.Count > 0
             ? $"\n- NÃO recomende estes (já sugeridos antes ou recusados): {string.Join(", ", avoid)}"
             : string.Empty;
+
+        var focusLine = string.IsNullOrEmpty(focusGenre)
+            ? string.Empty
+            : $"\n\nFOCO DESTA RODADA: priorize um ótimo filme do gênero \"{focusGenre}\" (coerente com o gosto dos dois). Se realmente não houver bom candidato nesse gênero, escolha outro gênero em comum — mas NÃO repita animação sem necessidade.";
 
         var msg = $@"Você é um cinéfilo especialista. Dois usuários querem assistir um filme JUNTOS.
 OBJETIVO: recomendar UM filme que NENHUM dos dois já assistiu, mas que ambos provavelmente vão gostar,
@@ -207,7 +220,7 @@ USUÁRIO 2 ({username2}):
 
 INTERSEÇÕES:
 - Gêneros em comum: {string.Join(", ", commonGenres)}
-- Diretores em comum: {string.Join(", ", commonDirectors)}
+- Diretores em comum: {string.Join(", ", commonDirectors)}{focusLine}
 
 REGRA OBRIGATÓRIA — filmes JÁ ASSISTIDOS por um dos dois (NÃO recomende NENHUM destes):
 {string.Join(", ", allWatched.Take(200))}{avoidLine}
