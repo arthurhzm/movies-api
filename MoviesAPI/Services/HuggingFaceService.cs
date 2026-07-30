@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace MoviesAPI.Services;
 
@@ -31,9 +32,11 @@ public sealed class HuggingFaceService
     {
         _httpClient = httpClientFactory.CreateClient("HuggingFaceClient");
         _logger = logger;
-        _token = Environment.GetEnvironmentVariable("HF_TOKEN")
-            ?? configuration["HuggingFace:Token"]
-            ?? throw new InvalidOperationException("HF_TOKEN is not configured");
+        var envToken = Environment.GetEnvironmentVariable("HF_TOKEN");
+        var configToken = configuration["HuggingFace:Token"];
+        _token = !string.IsNullOrWhiteSpace(envToken) ? envToken
+            : !string.IsNullOrWhiteSpace(configToken) ? configToken
+            : throw new InvalidOperationException("HF_TOKEN is not configured");
         _recommendationModel = configuration["HuggingFace:RecommendationModel"] ?? DefaultRecommendationModel;
         _conversationModel = configuration["HuggingFace:ConversationModel"] ?? DefaultConversationModel;
     }
@@ -85,9 +88,11 @@ public sealed class HuggingFaceService
             },
             new { role = "user", content = prompt }
         };
+        // Structured calls target a reasoning model (Qwen3); disabling its <think>
+        // step keeps the whole token budget for the JSON payload and avoids truncation.
         object requestBody = responseFormat is null
             ? new { model, messages, temperature = 0.35, max_tokens = maxTokens }
-            : new { model, messages, temperature = 0.35, max_tokens = maxTokens, response_format = responseFormat };
+            : new { model, messages, temperature = 0.35, max_tokens = maxTokens, response_format = responseFormat, chat_template_kwargs = new { enable_thinking = false } };
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
         {
@@ -127,9 +132,15 @@ public sealed class HuggingFaceService
                     .GetProperty("content")
                     .GetString();
 
-                return string.IsNullOrWhiteSpace(content)
-                    ? throw new HuggingFaceGenerationException("O modelo não retornou conteúdo.")
-                    : content;
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    throw new HuggingFaceGenerationException("O modelo não retornou conteúdo.");
+                }
+
+                // Reasoning models (e.g. Qwen3) emit a <think>…</think> block before the
+                // payload and don't always honor strict json_schema, so structured
+                // responses must be sanitized to the bare JSON before the caller parses it.
+                return responseFormat is null ? content : ExtractJsonPayload(content);
             }
             catch (HuggingFaceGenerationException)
             {
@@ -141,6 +152,32 @@ public sealed class HuggingFaceService
                 throw new HuggingFaceGenerationException("O provedor de IA retornou uma resposta inválida.", ex);
             }
         }
+    }
+
+    // Turns a raw model reply into bare JSON: drops <think>…</think> reasoning,
+    // strips markdown code fences, and keeps only the outermost JSON array/object.
+    private static string ExtractJsonPayload(string content)
+    {
+        var cleaned = Regex.Replace(content, "<think>.*?</think>", string.Empty,
+            RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+        // If reasoning was truncated/unclosed, keep everything after the last </think>.
+        var thinkEnd = cleaned.LastIndexOf("</think>", StringComparison.OrdinalIgnoreCase);
+        if (thinkEnd >= 0)
+        {
+            cleaned = cleaned[(thinkEnd + "</think>".Length)..];
+        }
+
+        cleaned = cleaned.Replace("```json", string.Empty).Replace("```", string.Empty).Trim();
+
+        var start = cleaned.IndexOfAny(new[] { '[', '{' });
+        var end = cleaned.LastIndexOfAny(new[] { ']', '}' });
+        if (start >= 0 && end > start)
+        {
+            cleaned = cleaned.Substring(start, end - start + 1);
+        }
+
+        return cleaned;
     }
 }
 
