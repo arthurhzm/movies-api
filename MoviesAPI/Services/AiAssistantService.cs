@@ -22,8 +22,9 @@ public sealed class AiAssistantService
         CancellationToken cancellationToken = default)
     {
         var prompt = $"""
-            Você é um especialista em cinema e busca semântica. Encontre até 10 filmes reais que correspondam à consulta abaixo.
+            Você é um especialista em cinema e busca semântica. Encontre até 6 filmes reais que correspondam à consulta abaixo.
             Priorize títulos exatos e depois relações temáticas genuínas. Não invente filmes ou disponibilidade em streaming.
+            Mantenha cada "overview" curto, com no máximo 240 caracteres.
 
             Consulta: {query}
             """;
