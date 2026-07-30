@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cinematch-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: cinematch
+      POSTGRES_USER: cinematch
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - cinematch-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cinematch"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [cinematch]
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinematch-api
+    restart: always
+    environment:
+      # EF migrations run automatically on startup.
+      DATABASE_URL: "Host=postgres;Port=5432;Database=cinematch;Username=cinematch;Password=${POSTGRES_PASSWORD}"
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      HF_TOKEN: ${HF_TOKEN}
+      TMDB_TOKEN: ${TMDB_TOKEN}
+      HuggingFace__RecommendationModel: Qwen/Qwen3-32B
+      HuggingFace__ConversationModel: openai/gpt-oss-120b
+      LETTERBOXD_POLL_HOURS: 6
+      ASPNETCORE_ENVIRONMENT: Production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [cinematch]
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: cinematch-caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+    networks: [cinematch]
+
+volumes:
+  cinematch-pgdata:
+  caddy-data:
+  caddy-config:
+
+networks:
+  cinematch:

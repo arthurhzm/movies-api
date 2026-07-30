@@ -1,0 +1,7 @@
+# Caddy terminates TLS (auto Let's Encrypt) for the API subdomain and proxies
+# to the api container over the internal Docker network. Requires:
+#   - a DNS A/AAAA record for $API_DOMAIN pointing at this server
+#   - ports 80 and 443 reachable from the internet
+{$API_DOMAIN} {
+	reverse_proxy api:8080
+}

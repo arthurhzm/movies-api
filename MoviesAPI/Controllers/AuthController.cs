@@ -11,12 +11,25 @@ public class AuthController : ControllerBase
 {
     private readonly IConfiguration _configuration;
     private readonly AuthService _authService;
+    private readonly IWebHostEnvironment _environment;
 
-    public AuthController(IConfiguration configuration, AuthService authService)
+    public AuthController(IConfiguration configuration, AuthService authService, IWebHostEnvironment environment)
     {
         _configuration = configuration;
         _authService = authService;
+        _environment = environment;
     }
+
+    // The frontend (Vercel) and API live on different sites in production, so the
+    // refresh cookie must be SameSite=None; Secure to be sent cross-site. Locally
+    // (same-site http://localhost) that would be rejected, so use Lax without Secure.
+    private CookieOptions RefreshCookieOptions(DateTime expires) => new()
+    {
+        HttpOnly = true,
+        Expires = expires,
+        Secure = !_environment.IsDevelopment(),
+        SameSite = _environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
+    };
 
     [HttpPost("register")]
     public async Task<IActionResult> Create([FromBody] CreateUserDTO model)
@@ -49,11 +62,7 @@ public class AuthController : ControllerBase
                 return BadRequest("User login failed.");
             }
 
-            var cookieOptions = new CookieOptions
-            {
-                HttpOnly = true,
-                Expires = DateTime.UtcNow.AddDays(7),
-            };
+            var cookieOptions = RefreshCookieOptions(DateTime.UtcNow.AddDays(7));
 
             Response.Cookies.Append("refreshToken", refreshToken, cookieOptions);
 
@@ -70,11 +79,7 @@ public class AuthController : ControllerBase
     [Authorize]
     public IActionResult Logout()
     {
-        var cookieOptions = new CookieOptions
-        {
-            HttpOnly = true,
-            Expires = DateTime.UtcNow.AddDays(-1),
-        };
+        var cookieOptions = RefreshCookieOptions(DateTime.UtcNow.AddDays(-1));
 
         Response.Cookies.Append("refreshToken", "", cookieOptions);
 
