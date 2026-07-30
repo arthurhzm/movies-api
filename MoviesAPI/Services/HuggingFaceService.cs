@@ -65,10 +65,11 @@ public sealed class HuggingFaceService
         Exception? lastError = null;
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            // 4000 leaves room for verbose results (e.g. 10 search hits with
-            // synopses); 2000 truncated them into invalid JSON.
+            // 2500 fits the bounded payloads (≤6 short search results, ≤10 short
+            // recommendations) while capping how long Qwen can pad the output —
+            // keeping total time (incl. a retry) under the 100s edge timeout.
             var content = await SendChatCompletionAsync(
-                _recommendationModel, prompt, responseFormat, maxTokens: 4_000, cancellationToken);
+                _recommendationModel, prompt, responseFormat, maxTokens: 2_500, cancellationToken);
             try
             {
                 using (JsonDocument.Parse(content)) { }
