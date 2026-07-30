@@ -3,6 +3,7 @@ namespace MoviesAPI.DTO;
 public class MatchResultDTO
 {
     public string MovieTitle { get; set; } = string.Empty;
+    public int? TmdbId { get; set; }
     public int? Year { get; set; }
     public string? WhyItWorks { get; set; }
     public int CompatibilityScore { get; set; }
@@ -16,6 +17,7 @@ public class MatchHistoryDTO
     public int UserId1 { get; set; }
     public int UserId2 { get; set; }
     public string MovieTitle { get; set; } = string.Empty;
+    public int? TmdbId { get; set; }
     public int? Year { get; set; }
     public string? WhyItWorks { get; set; }
     public int CompatibilityScore { get; set; }

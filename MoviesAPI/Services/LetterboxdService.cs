@@ -27,17 +27,20 @@ public class LetterboxdService
     private readonly HttpClient _httpClient;
     private readonly ILogger<LetterboxdService> _logger;
     private readonly LetterboxdCsvParser _csvParser;
+    private readonly ITmdbResolver _tmdbResolver;
 
     public LetterboxdService(
         AppDbContext context,
         IHttpClientFactory httpClientFactory,
         ILogger<LetterboxdService> logger,
-        LetterboxdCsvParser csvParser)
+        LetterboxdCsvParser csvParser,
+        ITmdbResolver tmdbResolver)
     {
         _context = context;
         _httpClient = httpClientFactory.CreateClient("LetterboxdClient");
         _logger = logger;
         _csvParser = csvParser;
+        _tmdbResolver = tmdbResolver;
     }
 
     public static bool IsValidUsername(string username) => ValidUsername.IsMatch(username);
@@ -219,6 +222,7 @@ public class LetterboxdService
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
 
         var claimedIds = new HashSet<int>();
+        var touched = new List<UserMovieFeedbackModel>();
         var created = 0;
         var updated = 0;
         var unchanged = 0;
@@ -231,7 +235,7 @@ public class LetterboxdService
 
             if (feedback is null)
             {
-                _context.UserMovieFeedback.Add(new UserMovieFeedbackModel
+                var created_entity = new UserMovieFeedbackModel
                 {
                     UserId = user.Id,
                     MovieTitle = rating.MovieTitle,
@@ -240,12 +244,15 @@ public class LetterboxdService
                     Rating = rating.Rating,
                     CreatedAt = rating.RatedAt,
                     UpdatedAt = updatedAt
-                });
+                };
+                _context.UserMovieFeedback.Add(created_entity);
+                touched.Add(created_entity);
                 created++;
                 continue;
             }
 
             claimedIds.Add(feedback.Id);
+            touched.Add(feedback);
             var changed = false;
 
             if (!string.Equals(feedback.MovieTitle, rating.MovieTitle, StringComparison.Ordinal))
@@ -284,6 +291,11 @@ public class LetterboxdService
             }
         }
 
+        // Resolve the stable TMDB id for any touched row that still lacks one, so
+        // imported ratings match movies browsed through TMDB. Best-effort: failures
+        // leave TmdbId null and never block the import.
+        await ResolveMissingTmdbIdsAsync(touched, cancellationToken);
+
         if (created > 0 || updated > 0)
         {
             var cachedRecommendations = await _context.GeneratedRecommendations
@@ -293,6 +305,56 @@ public class LetterboxdService
         }
 
         return new MergeOutcome(created, updated, unchanged, existingFeedback.Count + created);
+    }
+
+    public async Task<int> BackfillTmdbIdsAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var rows = await _context.UserMovieFeedback
+            .Where(feedback => feedback.UserId == userId && feedback.TmdbId == null)
+            .ToListAsync(cancellationToken);
+
+        await ResolveMissingTmdbIdsAsync(rows, cancellationToken);
+        var resolved = rows.Count(row => row.TmdbId != null);
+        if (resolved > 0)
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        return resolved;
+    }
+
+    private async Task ResolveMissingTmdbIdsAsync(
+        IReadOnlyList<UserMovieFeedbackModel> entities,
+        CancellationToken cancellationToken)
+    {
+        var pending = entities
+            .Where(entity => entity.TmdbId is null && !string.IsNullOrWhiteSpace(entity.MovieTitle))
+            .ToList();
+        if (pending.Count == 0)
+        {
+            return;
+        }
+
+        // Bounded concurrency: TMDB lookups are independent and never touch the DbContext.
+        using var gate = new SemaphoreSlim(8);
+        var tasks = pending.Select(async entity =>
+        {
+            await gate.WaitAsync(cancellationToken);
+            try
+            {
+                entity.TmdbId = await _tmdbResolver.ResolveTmdbIdAsync(entity.MovieTitle, entity.MovieYear, cancellationToken);
+            }
+            catch
+            {
+                // best-effort; leave null
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+
+        await Task.WhenAll(tasks);
     }
 
     private static UserMovieFeedbackModel? FindUniqueUnclaimed(

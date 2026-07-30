@@ -10,11 +10,13 @@ public class MatchService
 {
     private readonly AppDbContext _context;
     private readonly HuggingFaceService _huggingFaceService;
+    private readonly ITmdbResolver _tmdbResolver;
 
-    public MatchService(AppDbContext context, HuggingFaceService huggingFaceService)
+    public MatchService(AppDbContext context, HuggingFaceService huggingFaceService, ITmdbResolver tmdbResolver)
     {
         _context = context;
         _huggingFaceService = huggingFaceService;
+        _tmdbResolver = tmdbResolver;
     }
 
     public async Task<MatchResultDTO> GenerateMatchAsync(int userId1, int userId2)
@@ -54,12 +56,17 @@ public class MatchService
             HuggingFaceJsonSchemas.Match);
         var result = ParseMatchJson(responseText, commonGenres, commonDirectors);
 
+        // Resolve the picked movie to its stable TMDB id so the frontend can load
+        // the poster/details reliably (best-effort; stays null if not found).
+        result.TmdbId = await _tmdbResolver.ResolveTmdbIdAsync(result.MovieTitle, result.Year);
+
         // Save to history
         _context.Matches.Add(new MatchModel
         {
             UserId1 = userId1,
             UserId2 = userId2,
             MovieTitle = result.MovieTitle,
+            TmdbId = result.TmdbId,
             Year = result.Year,
             WhyItWorks = result.WhyItWorks,
             CompatibilityScore = result.CompatibilityScore,
@@ -93,6 +100,7 @@ public class MatchService
                 UserId1 = m.UserId1,
                 UserId2 = m.UserId2,
                 MovieTitle = m.MovieTitle,
+                TmdbId = m.TmdbId,
                 Year = m.Year,
                 WhyItWorks = m.WhyItWorks,
                 CompatibilityScore = m.CompatibilityScore,

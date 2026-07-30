@@ -18,11 +18,24 @@ public class UserMovieFeedbackController : ControllerBase
 
     [HttpGet("user/{userId}/feedback")]
     [Authorize]
-    public async Task<IActionResult> GetUserMovieFeedback(int userId, [FromQuery] string? movieTitle = null)
+    public async Task<IActionResult> GetUserMovieFeedback(
+        int userId,
+        [FromQuery] string? movieTitle = null,
+        [FromQuery] int? tmdbId = null)
     {
         List<UserMovieFeedbackResponseDTO>? feedbackList;
 
-        if (movieTitle != null)
+        if (tmdbId.HasValue)
+        {
+            // Prefer the stable TMDB id; fall back to title for legacy rows without one.
+            var byTmdb = await _userMovieFeedbackService.GetUserFeedbackByUserIdAndTmdbId(userId, tmdbId.Value);
+            if (byTmdb == null && movieTitle != null)
+            {
+                byTmdb = await _userMovieFeedbackService.GetUserFeedbackByUserIdAndMovieTitle(userId, movieTitle);
+            }
+            feedbackList = byTmdb != null ? new List<UserMovieFeedbackResponseDTO> { byTmdb } : null;
+        }
+        else if (movieTitle != null)
         {
             var singleFeedback = await _userMovieFeedbackService.GetUserFeedbackByUserIdAndMovieTitle(userId, movieTitle);
             feedbackList = singleFeedback != null ? new List<UserMovieFeedbackResponseDTO> { singleFeedback } : null;
@@ -114,6 +127,14 @@ public class UserMovieFeedbackController : ControllerBase
             return NoContent();
         }
 
+        return Ok(new { Data = feedback, Message = "Movie feedback retrieved successfully." });
+    }
+
+    [HttpGet("movies/tmdb/{tmdbId:int}/feedback")]
+    [Authorize]
+    public async Task<IActionResult> GetMovieFeedbackByTmdbId(int tmdbId)
+    {
+        var feedback = await _userMovieFeedbackService.GetMovieUsersFeedbackByTmdbId(tmdbId);
         return Ok(new { Data = feedback, Message = "Movie feedback retrieved successfully." });
     }
 }

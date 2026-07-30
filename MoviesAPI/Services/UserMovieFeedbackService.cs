@@ -23,32 +23,31 @@ public class UserMovieFeedbackService
             .OrderByDescending(f => f.UpdatedAt)
             .ToListAsync();
 
-        return feedbacks.Select(feedback => new UserMovieFeedbackResponseDTO
-        {
-            Id = feedback.Id,
-            MovieTitle = feedback.MovieTitle,
-            Rating = feedback.Rating,
-            Review = feedback.Review
-        }).ToList();
+        return feedbacks.Select(ToResponseDTO).ToList();
     }
 
     public async Task<UserMovieFeedbackResponseDTO?> GetUserFeedbackByUserIdAndMovieTitle(int userId, string movieTitle)
     {
         var feedback = await _context.UserMovieFeedback
             .FirstOrDefaultAsync(umf => umf.UserId == userId && umf.MovieTitle == movieTitle);
-        if (feedback == null)
-        {
-            return null;
-        }
-
-        return new UserMovieFeedbackResponseDTO
-        {
-            Id = feedback.Id,
-            MovieTitle = feedback.MovieTitle,
-            Rating = feedback.Rating,
-            Review = feedback.Review
-        };
+        return feedback == null ? null : ToResponseDTO(feedback);
     }
+
+    public async Task<UserMovieFeedbackResponseDTO?> GetUserFeedbackByUserIdAndTmdbId(int userId, int tmdbId)
+    {
+        var feedback = await _context.UserMovieFeedback
+            .FirstOrDefaultAsync(umf => umf.UserId == userId && umf.TmdbId == tmdbId);
+        return feedback == null ? null : ToResponseDTO(feedback);
+    }
+
+    private static UserMovieFeedbackResponseDTO ToResponseDTO(UserMovieFeedbackModel feedback) => new()
+    {
+        Id = feedback.Id,
+        MovieTitle = feedback.MovieTitle,
+        TmdbId = feedback.TmdbId,
+        Rating = feedback.Rating,
+        Review = feedback.Review
+    };
 
     public async Task<FriendMovieFeedbackDTO[]?> GetFriendsMoviesFeedback(int userId)
     {
@@ -79,17 +78,37 @@ public class UserMovieFeedbackService
 
     public async Task<UserMovieFeedbackModel> CreateUserMovieFeedback(int userId, CreateUserMovieFeedbackDTO feedbackDto)
     {
-        var feedback = new UserMovieFeedbackModel
+        // Upsert by stable TMDB id so rating a movie that was already imported
+        // updates the existing row instead of creating a duplicate.
+        UserMovieFeedbackModel? feedback = null;
+        if (feedbackDto.TmdbId is int tmdbId)
         {
-            UserId = userId,
-            MovieTitle = feedbackDto.MovieTitle,
-            Rating = feedbackDto.Rating,
-            Review = feedbackDto.Review,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+            feedback = await _context.UserMovieFeedback
+                .FirstOrDefaultAsync(umf => umf.UserId == userId && umf.TmdbId == tmdbId);
+        }
 
-        _context.UserMovieFeedback.Add(feedback);
+        if (feedback == null)
+        {
+            feedback = new UserMovieFeedbackModel
+            {
+                UserId = userId,
+                MovieTitle = feedbackDto.MovieTitle,
+                TmdbId = feedbackDto.TmdbId,
+                Rating = feedbackDto.Rating,
+                Review = feedbackDto.Review,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.UserMovieFeedback.Add(feedback);
+        }
+        else
+        {
+            feedback.MovieTitle = feedbackDto.MovieTitle;
+            feedback.Rating = feedbackDto.Rating;
+            feedback.Review = feedbackDto.Review;
+            feedback.UpdatedAt = DateTime.UtcNow;
+        }
+
         await _context.SaveChangesAsync();
 
         return feedback;
@@ -110,13 +129,7 @@ public class UserMovieFeedbackService
         _context.UserMovieFeedback.Update(feedback);
         await _context.SaveChangesAsync();
 
-        return new UserMovieFeedbackResponseDTO
-        {
-            Id = feedback.Id,
-            MovieTitle = feedback.MovieTitle,
-            Rating = feedback.Rating,
-            Review = feedback.Review
-        };
+        return ToResponseDTO(feedback);
     }
 
     public async Task<int?> GetUserIdByFeedbackIdAsync(int feedbackId)
@@ -141,6 +154,17 @@ public class UserMovieFeedbackService
         return true;
     }
 
+    public async Task<MovieUsersFeedbackResponseDTO[]> GetMovieUsersFeedbackByTmdbId(int tmdbId)
+    {
+        var feedbacks = await _context.UserMovieFeedback
+            .Include(umf => umf.User)
+            .Where(umf => umf.TmdbId == tmdbId)
+            .OrderByDescending(f => f.UpdatedAt)
+            .ToListAsync();
+
+        return MapMovieUsersFeedback(feedbacks);
+    }
+
     public async Task<MovieUsersFeedbackResponseDTO[]> GetMovieUsersFeedback(string movieTitle)
     {
         var feedbacks = await _context.UserMovieFeedback
@@ -149,6 +173,11 @@ public class UserMovieFeedbackService
             .OrderByDescending(f => f.UpdatedAt)
             .ToListAsync();
 
+        return MapMovieUsersFeedback(feedbacks);
+    }
+
+    private static MovieUsersFeedbackResponseDTO[] MapMovieUsersFeedback(List<UserMovieFeedbackModel> feedbacks)
+    {
         return feedbacks.Select(feedback => new MovieUsersFeedbackResponseDTO
         {
             Id = feedback.Id,

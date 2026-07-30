@@ -35,7 +35,8 @@ internal static class TestSupport
             context,
             new StubHttpClientFactory(new HttpClient(new StubHttpMessageHandler(response))),
             NullLogger<LetterboxdService>.Instance,
-            new LetterboxdCsvParser());
+            new LetterboxdCsvParser(),
+            new NoopTmdbResolver());
     }
 
     public static LetterboxdController CreateController(

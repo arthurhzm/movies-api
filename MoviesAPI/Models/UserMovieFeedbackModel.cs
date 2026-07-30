@@ -8,6 +8,7 @@ public class UserMovieFeedbackModel
     public int UserId { get; set; }
     public string MovieTitle { get; set; } = string.Empty;
     public int? MovieYear { get; set; }
+    public int? TmdbId { get; set; }
     public string? LetterboxdUri { get; set; }
     public double Rating { get; set; } = 0.0;
     public string? Review { get; set; }

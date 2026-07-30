@@ -102,6 +102,27 @@ builder.Services.AddHttpClient("HuggingFaceClient", client =>
 });
 builder.Services.AddHttpClient("LetterboxdClient");
 
+// TMDB is the canonical movie identity: resolve titles -> tmdbId so imported
+// ratings line up with movies browsed through TMDB. Falls back to a no-op
+// resolver when no token is configured (e.g. tests / local without TMDB).
+var tmdbToken = Environment.GetEnvironmentVariable("TMDB_TOKEN")
+    ?? builder.Configuration["Tmdb:Token"];
+if (!string.IsNullOrWhiteSpace(tmdbToken))
+{
+    builder.Services.AddHttpClient("TmdbClient", client =>
+    {
+        client.BaseAddress = new Uri("https://api.themoviedb.org/3/");
+        client.Timeout = TimeSpan.FromSeconds(15);
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {tmdbToken}");
+        client.DefaultRequestHeaders.Add("Accept", "application/json");
+    });
+    builder.Services.AddScoped<ITmdbResolver, TmdbResolver>();
+}
+else
+{
+    builder.Services.AddScoped<ITmdbResolver, NoopTmdbResolver>();
+}
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

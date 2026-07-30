@@ -33,6 +33,9 @@ public class AppDbContext : DbContext
             entity.HasIndex(feedback => new { feedback.UserId, feedback.LetterboxdUri })
                 .IsUnique()
                 .HasFilter("\"LetterboxdUri\" IS NOT NULL");
+
+            entity.HasIndex(feedback => new { feedback.UserId, feedback.TmdbId })
+                .HasFilter("\"TmdbId\" IS NOT NULL");
         });
 
         modelBuilder.Entity<UserRecommendationFeedbackModel>()

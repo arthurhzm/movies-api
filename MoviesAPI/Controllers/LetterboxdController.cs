@@ -217,6 +217,28 @@ public class LetterboxdController : ControllerBase
         });
     }
 
+    [HttpPost("user/{userId}/letterboxd/backfill-tmdb")]
+    [Authorize]
+    public async Task<IActionResult> BackfillTmdb(int userId, CancellationToken cancellationToken)
+    {
+        if (!IsCurrentUser(userId))
+        {
+            return Forbid();
+        }
+
+        if (!await _context.Auth.AnyAsync(user => user.Id == userId, cancellationToken))
+        {
+            return NotFound(new { message = "Usuário não encontrado." });
+        }
+
+        var resolved = await _letterboxdService.BackfillTmdbIdsAsync(userId, cancellationToken);
+        return Ok(new
+        {
+            data = new { resolved },
+            message = $"{resolved} filme(s) vinculado(s) ao TMDB."
+        });
+    }
+
     private bool IsCurrentUser(int userId)
     {
         var claimValue = User.FindFirst(ClaimTypes.Name)?.Value;
