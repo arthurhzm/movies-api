@@ -42,23 +42,48 @@ public class MatchService
             .Union(movies2.Select(m => m.MovieTitle), StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var prompt = BuildMatchPrompt(
-            user1?.Username ?? $"Usuario{userId1}",
-            user2?.Username ?? $"Usuario{userId2}",
-            prefs1, prefs2,
-            movies1, movies2,
-            commonGenres, commonDirectors,
-            allWatched);
+        // Sets to reject already-watched picks (by normalized title AND stable tmdbId).
+        var watchedTitles = new HashSet<string>(
+            movies1.Concat(movies2).Select(m => NormalizeTitle(m.MovieTitle)),
+            StringComparer.Ordinal);
+        var watchedTmdbIds = new HashSet<int>(
+            movies1.Concat(movies2).Where(m => m.TmdbId.HasValue).Select(m => m.TmdbId!.Value));
 
-        var responseText = await _huggingFaceService.GenerateStructuredJsonAsync(
-            prompt,
-            "movie_match",
-            HuggingFaceJsonSchemas.Match);
-        var result = ParseMatchJson(responseText, commonGenres, commonDirectors);
+        // Generate, then reject any movie either user already saw and retry while
+        // telling the model to avoid it. Match is a single-item generation (fast),
+        // so a few attempts stay well within the request budget.
+        var avoid = new List<string>();
+        MatchResultDTO result;
+        const int maxAttempts = 3;
+        for (var attempt = 1; ; attempt++)
+        {
+            var prompt = BuildMatchPrompt(
+                user1?.Username ?? $"Usuario{userId1}",
+                user2?.Username ?? $"Usuario{userId2}",
+                prefs1, prefs2,
+                movies1, movies2,
+                commonGenres, commonDirectors,
+                allWatched, avoid);
 
-        // Resolve the picked movie to its stable TMDB id so the frontend can load
-        // the poster/details reliably (best-effort; stays null if not found).
-        result.TmdbId = await _tmdbResolver.ResolveTmdbIdAsync(result.MovieTitle, result.Year);
+            var responseText = await _huggingFaceService.GenerateStructuredJsonAsync(
+                prompt,
+                "movie_match",
+                HuggingFaceJsonSchemas.Match);
+            result = ParseMatchJson(responseText, commonGenres, commonDirectors);
+
+            // Resolve the picked movie to its stable TMDB id so the frontend can load
+            // the poster/details reliably (best-effort; stays null if not found).
+            result.TmdbId = await _tmdbResolver.ResolveTmdbIdAsync(result.MovieTitle, result.Year);
+
+            var alreadyWatched = watchedTitles.Contains(NormalizeTitle(result.MovieTitle))
+                || (result.TmdbId.HasValue && watchedTmdbIds.Contains(result.TmdbId.Value));
+            if (!alreadyWatched || attempt >= maxAttempts)
+            {
+                break;
+            }
+
+            avoid.Add(result.MovieTitle);
+        }
 
         // Save to history
         _context.Matches.Add(new MatchModel
@@ -134,32 +159,42 @@ public class MatchService
         }
     }
 
+    private static string NormalizeTitle(string title) =>
+        string.Join(' ', (title ?? string.Empty).Trim().ToUpperInvariant()
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
     private string BuildMatchPrompt(
         string username1, string username2,
         UserPreferencesModel? prefs1, UserPreferencesModel? prefs2,
         List<UserMovieFeedbackModel> movies1, List<UserMovieFeedbackModel> movies2,
         List<string> commonGenres, List<string> commonDirectors,
-        List<string> allWatched)
+        List<string> allWatched, IReadOnlyList<string> avoid)
     {
-        var msg = $@"Você é um cinéfilo especialista. Dois usuários querem assistir um filme juntos.
-Encontre o filme PERFEITO para eles assistirem juntos.
+        var avoidLine = avoid.Count > 0
+            ? $"\n- Você JÁ sugeriu estes e foram recusados por já terem sido vistos; escolha outro: {string.Join(", ", avoid)}"
+            : string.Empty;
+
+        var msg = $@"Você é um cinéfilo especialista. Dois usuários querem assistir um filme JUNTOS.
+OBJETIVO: recomendar UM filme que NENHUM dos dois já assistiu, mas que ambos provavelmente vão gostar,
+com base no gosto em comum (gêneros/diretores em comum e o estilo dos filmes que cada um avaliou bem).
+NÃO recomende um filme que qualquer um dos dois já tenha visto.
 
 USUÁRIO 1 ({username1}):
 - Gêneros favoritos: {(prefs1 != null ? string.Join(", ", prefs1.FavoriteGenres) : "não informado")}
 - Diretores favoritos: {(prefs1 != null ? string.Join(", ", prefs1.FavoriteDirectors) : "não informado")}
-- Filmes bem avaliados: {string.Join(", ", movies1.Where(m => m.Rating >= 4).Select(m => $"{m.MovieTitle} ({m.Rating}★)"))}
+- Filmes bem avaliados: {string.Join(", ", movies1.Where(m => m.Rating >= 4).Select(m => $"{m.MovieTitle} ({m.Rating}★)").Take(40))}
 
 USUÁRIO 2 ({username2}):
 - Gêneros favoritos: {(prefs2 != null ? string.Join(", ", prefs2.FavoriteGenres) : "não informado")}
 - Diretores favoritos: {(prefs2 != null ? string.Join(", ", prefs2.FavoriteDirectors) : "não informado")}
-- Filmes bem avaliados: {string.Join(", ", movies2.Where(m => m.Rating >= 4).Select(m => $"{m.MovieTitle} ({m.Rating}★)"))}
+- Filmes bem avaliados: {string.Join(", ", movies2.Where(m => m.Rating >= 4).Select(m => $"{m.MovieTitle} ({m.Rating}★)").Take(40))}
 
 INTERSEÇÕES:
 - Gêneros em comum: {string.Join(", ", commonGenres)}
 - Diretores em comum: {string.Join(", ", commonDirectors)}
 
-RESTRIÇÕES:
-- NÃO recomende nenhum destes filmes (já assistidos): {string.Join(", ", allWatched.Take(50))}
+REGRA OBRIGATÓRIA — filmes JÁ ASSISTIDOS por um dos dois (NÃO recomende NENHUM destes):
+{string.Join(", ", allWatched.Take(200))}{avoidLine}
 
 Retorne um único JSON com:
 - title (título em português do Brasil se existir, senão original)
