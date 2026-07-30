@@ -31,6 +31,11 @@ public sealed class AiAssistantController : ControllerBase
             return Forbid();
         }
 
+        if (request is null)
+        {
+            return BadRequest(new { message = "Informe uma busca de até 200 caracteres." });
+        }
+
         var query = request.Query?.Trim();
         if (string.IsNullOrWhiteSpace(query) || query.Length > MaxSearchQueryLength)
         {
@@ -58,6 +63,11 @@ public sealed class AiAssistantController : ControllerBase
         if (!IsCurrentUser(userId))
         {
             return Forbid();
+        }
+
+        if (request is null)
+        {
+            return BadRequest(new { message = "A conversa enviada é inválida." });
         }
 
         var messages = request.Messages;

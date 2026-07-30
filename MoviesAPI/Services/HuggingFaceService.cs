@@ -41,26 +41,48 @@ public sealed class HuggingFaceService
         _conversationModel = configuration["HuggingFace:ConversationModel"] ?? DefaultConversationModel;
     }
 
-    public Task<string> GenerateStructuredJsonAsync(
+    public async Task<string> GenerateStructuredJsonAsync(
         string prompt,
         string schemaName,
         object schema,
-        CancellationToken cancellationToken = default) =>
-        SendChatCompletionAsync(
-            _recommendationModel,
-            prompt,
-            new
+        CancellationToken cancellationToken = default)
+    {
+        var responseFormat = new
+        {
+            type = "json_schema",
+            json_schema = new
             {
-                type = "json_schema",
-                json_schema = new
-                {
-                    name = schemaName,
-                    strict = true,
-                    schema
-                }
-            },
-            maxTokens: 2_000,
-            cancellationToken);
+                name = schemaName,
+                strict = true,
+                schema
+            }
+        };
+
+        // Qwen occasionally returns malformed/truncated JSON even with a strict
+        // schema; retry a few times so a single bad generation doesn't surface
+        // as a 502 to the user.
+        const int maxAttempts = 3;
+        Exception? lastError = null;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            var content = await SendChatCompletionAsync(
+                _recommendationModel, prompt, responseFormat, maxTokens: 2_000, cancellationToken);
+            try
+            {
+                using (JsonDocument.Parse(content)) { }
+                return content;
+            }
+            catch (JsonException ex)
+            {
+                lastError = ex;
+                _logger.LogWarning(
+                    "Structured JSON attempt {Attempt}/{Max} for {Schema} was not valid JSON; retrying",
+                    attempt, maxAttempts, schemaName);
+            }
+        }
+
+        throw new HuggingFaceGenerationException("O provedor de IA retornou uma resposta inválida.", lastError);
+    }
 
     public Task<string> GenerateConversationAsync(
         string prompt,
