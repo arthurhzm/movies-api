@@ -3,3 +3,7 @@ MoviesAPI/bin/
 MoviesAPI/obj/
 MoviesAPI.Tests/bin/
 MoviesAPI.Tests/obj/
+
+# Local secrets & tooling (root)
+.env
+.claude/
