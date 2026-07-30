@@ -45,7 +45,8 @@ public sealed class HuggingFaceService
         string prompt,
         string schemaName,
         object schema,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        double temperature = 0.35)
     {
         var responseFormat = new
         {
@@ -69,7 +70,7 @@ public sealed class HuggingFaceService
             // recommendations) while capping how long Qwen can pad the output —
             // keeping total time (incl. a retry) under the 100s edge timeout.
             var content = await SendChatCompletionAsync(
-                _recommendationModel, prompt, responseFormat, maxTokens: 2_500, cancellationToken);
+                _recommendationModel, prompt, responseFormat, maxTokens: 2_500, cancellationToken, temperature);
             try
             {
                 using (JsonDocument.Parse(content)) { }
@@ -102,7 +103,8 @@ public sealed class HuggingFaceService
         string prompt,
         object? responseFormat,
         int maxTokens,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        double temperature = 0.35)
     {
         var messages = new[]
         {
@@ -116,8 +118,8 @@ public sealed class HuggingFaceService
         // Structured calls target a reasoning model (Qwen3); disabling its <think>
         // step keeps the whole token budget for the JSON payload and avoids truncation.
         object requestBody = responseFormat is null
-            ? new { model, messages, temperature = 0.35, max_tokens = maxTokens }
-            : new { model, messages, temperature = 0.35, max_tokens = maxTokens, response_format = responseFormat, chat_template_kwargs = new { enable_thinking = false } };
+            ? new { model, messages, temperature, max_tokens = maxTokens }
+            : new { model, messages, temperature, max_tokens = maxTokens, response_format = responseFormat, chat_template_kwargs = new { enable_thinking = false } };
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
         {

@@ -49,10 +49,21 @@ public class MatchService
         var watchedTmdbIds = new HashSet<int>(
             movies1.Concat(movies2).Where(m => m.TmdbId.HasValue).Select(m => m.TmdbId!.Value));
 
+        // Seed the avoid-list with recent matches for this pair so we don't keep
+        // suggesting the same handful of movies.
+        var recentMatches = await _context.Matches.AsNoTracking()
+            .Where(m => (m.UserId1 == userId1 && m.UserId2 == userId2)
+                || (m.UserId1 == userId2 && m.UserId2 == userId1))
+            .OrderByDescending(m => m.GeneratedAt)
+            .Select(m => m.MovieTitle)
+            .Take(15)
+            .ToListAsync();
+
         // Generate, then reject any movie either user already saw and retry while
         // telling the model to avoid it. Match is a single-item generation (fast),
-        // so a few attempts stay well within the request budget.
-        var avoid = new List<string>();
+        // so a few attempts stay well within the request budget. Higher temperature
+        // adds variety so it doesn't collapse onto one genre.
+        var avoid = new List<string>(recentMatches);
         MatchResultDTO result;
         const int maxAttempts = 3;
         for (var attempt = 1; ; attempt++)
@@ -68,7 +79,8 @@ public class MatchService
             var responseText = await _huggingFaceService.GenerateStructuredJsonAsync(
                 prompt,
                 "movie_match",
-                HuggingFaceJsonSchemas.Match);
+                HuggingFaceJsonSchemas.Match,
+                temperature: 0.8);
             result = ParseMatchJson(responseText, commonGenres, commonDirectors);
 
             // Resolve the picked movie to its stable TMDB id so the frontend can load
@@ -171,23 +183,27 @@ public class MatchService
         List<string> allWatched, IReadOnlyList<string> avoid)
     {
         var avoidLine = avoid.Count > 0
-            ? $"\n- Você JÁ sugeriu estes e foram recusados por já terem sido vistos; escolha outro: {string.Join(", ", avoid)}"
+            ? $"\n- NÃO recomende estes (já sugeridos antes ou recusados): {string.Join(", ", avoid)}"
             : string.Empty;
 
         var msg = $@"Você é um cinéfilo especialista. Dois usuários querem assistir um filme JUNTOS.
 OBJETIVO: recomendar UM filme que NENHUM dos dois já assistiu, mas que ambos provavelmente vão gostar,
 com base no gosto em comum (gêneros/diretores em comum e o estilo dos filmes que cada um avaliou bem).
-NÃO recomende um filme que qualquer um dos dois já tenha visto.
+
+DIVERSIDADE (importante): varie o gênero a cada recomendação. NÃO recomende sempre o mesmo tipo de filme
+(por exemplo, evite cair sempre em animação). Considere TODA a amplitude do gosto dos dois — drama, suspense,
+ficção científica, terror, comédia, ação, romance etc. — e prefira um filme aclamado, surpreendente e coeso
+com o gosto em comum, sem se limitar a um único gênero.
 
 USUÁRIO 1 ({username1}):
 - Gêneros favoritos: {(prefs1 != null ? string.Join(", ", prefs1.FavoriteGenres) : "não informado")}
 - Diretores favoritos: {(prefs1 != null ? string.Join(", ", prefs1.FavoriteDirectors) : "não informado")}
-- Filmes bem avaliados: {string.Join(", ", movies1.Where(m => m.Rating >= 4).Select(m => $"{m.MovieTitle} ({m.Rating}★)").Take(40))}
+- Filmes que mais gostou: {string.Join(", ", movies1.Where(m => m.Rating >= 4).OrderByDescending(m => m.Rating).Select(m => $"{m.MovieTitle} ({m.Rating}★)").Take(30))}
 
 USUÁRIO 2 ({username2}):
 - Gêneros favoritos: {(prefs2 != null ? string.Join(", ", prefs2.FavoriteGenres) : "não informado")}
 - Diretores favoritos: {(prefs2 != null ? string.Join(", ", prefs2.FavoriteDirectors) : "não informado")}
-- Filmes bem avaliados: {string.Join(", ", movies2.Where(m => m.Rating >= 4).Select(m => $"{m.MovieTitle} ({m.Rating}★)").Take(40))}
+- Filmes que mais gostou: {string.Join(", ", movies2.Where(m => m.Rating >= 4).OrderByDescending(m => m.Rating).Select(m => $"{m.MovieTitle} ({m.Rating}★)").Take(30))}
 
 INTERSEÇÕES:
 - Gêneros em comum: {string.Join(", ", commonGenres)}
